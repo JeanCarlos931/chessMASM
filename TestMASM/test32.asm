@@ -1,11 +1,20 @@
 ; ===================================================================
-; JUEGO DE AJEDREZ SIMPLE - VERSIÓN CORREGIDA
+; JUEGO DE AJEDREZ SIMPLE - VERSIï¿½N CORREGIDA
 ; ===================================================================
-; Versión simplificada que funciona correctamente
+; Versiï¿½n simplificada que funciona correctamente
 ; ===================================================================
 
 INCLUDE Irvine32.inc
 include Macros.inc 
+
+; Macro: Actualiza partida.json con estado/turn/fen y espera turno 'b'
+mActualizarPartidaYEsperarB MACRO
+    call EscribirJSONTurnFenW
+    mov edx, OFFSET esperando_jugada
+    call WriteString
+    call Crlf
+    call EsperarJugadaB
+ENDM
 
 .data
     ; ===================================================================
@@ -43,9 +52,9 @@ include Macros.inc
     ; ===================================================================
     rol_seleccionado BYTE ?             ; 'A' o 'B'
     handle_archivo   DWORD ?            ; Handle del archivo
-    bytes_leidos     DWORD ?            ; Bytes leídos del archivo
+    bytes_leidos     DWORD ?            ; Bytes leï¿½dos del archivo
     bytes_escritos   DWORD ?            ; Bytes escritos al archivo
-    confirmacion_recibida BYTE 0        ; Bandera para confirmación de Jugador B
+    confirmacion_recibida BYTE 0        ; Bandera para confirmaciï¿½n de Jugador B
 
     ; ===================================================================
     ; PLANTILLAS JSON
@@ -59,6 +68,11 @@ include Macros.inc
     ; JSON completo requerido tras jugada de A
     json_estado_turn_fen_w BYTE '{"estado": "recibida", "turn": "w", "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}', 0
     
+    ; Buffers y plantillas para construir FEN dinÃ¡mico y JSON
+    fen_suffix BYTE " w KQkq - 0 1", 0
+    json_estado_turn_fen_prefix BYTE '{"estado": "recibida", "turn": "w", "fen": "', 0
+    buffer_fen     BYTE 128 DUP(0)
+    
     ; ===================================================================
     ; MENSAJES DE ERROR
     ; ===================================================================
@@ -66,10 +80,10 @@ include Macros.inc
     error_abrir      BYTE "Error al abrir archivo partida.json", 0
     error_escribir   BYTE "Error al escribir en archivo", 0
     error_leer       BYTE "Error al leer archivo", 0
-    error_bando_msg BYTE "Error: Solo puedes mover piezas minúsculas (bando B).", 0
+    error_bando_msg BYTE "Error: Solo puedes mover piezas minï¿½sculas (bando B).", 0
     
     ; ===================================================================
-    ; MENSAJES DE DEPURACIÓN
+    ; MENSAJES DE DEPURACIï¿½N
     ; ===================================================================
     mensaje_debug    BYTE "DEBUG: Contenido del archivo: ", 0
     mensaje_encontrado BYTE "DEBUG: Palabra 'iniciada' encontrada!", 0
@@ -94,7 +108,7 @@ include Macros.inc
     m7       BYTE 'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'  ; Fila 7
     m8       BYTE 't', 'c', 'a', 'k', 'r', 'a', 'c', 't'  ; Fila 8
 
-    ; Matriz que guarda el color de cada posición (1 para azul, 0 para blanco)
+    ; Matriz que guarda el color de cada posiciï¿½n (1 para azul, 0 para blanco)
   colorMatriz BYTE 1, 0, 1, 0, 1, 0, 1, 0   ; Fila 1
                BYTE 0, 1, 0, 1, 0, 1, 0, 1   ; Fila 2
                BYTE 1, 0, 1, 0, 1, 0, 1, 0   ; Fila 3
@@ -152,34 +166,34 @@ main PROC
     ; ===================================================================
     call Clrscr                    ; Limpiar pantalla
     
-    ; Mostrar título
+    ; Mostrar tï¿½tulo
     mov edx, OFFSET titulo
     call WriteString
     call Crlf
     call Crlf
     
-    ; Mostrar menú de selección de rol
+    ; Mostrar menï¿½ de selecciï¿½n de rol
     call MostrarMenuRol
     
-    ; Procesar selección según el rol elegido
+    ; Procesar selecciï¿½n segï¿½n el rol elegido
     cmp rol_seleccionado, 'A'
     je JugadorA
     cmp rol_seleccionado, 'B'
     je JugadorB
     
-    ; Si llegamos aquí, hay un error
+    ; Si llegamos aquï¿½, hay un error
     jmp Salir
     
 JugadorA:
     ; ===================================================================
-    ; LÓGICA DEL JUGADOR A (INICIA LA PARTIDA)
+    ; Lï¿½GICA DEL JUGADOR A (INICIA LA PARTIDA)
     ; ===================================================================
     call IniciarPartidaA
     jmp Salir
     
 JugadorB:
     ; ===================================================================
-    ; LÓGICA DEL JUGADOR B (ESPERA INVITACIÓN)
+    ; Lï¿½GICA DEL JUGADOR B (ESPERA INVITACIï¿½N)
     ; ===================================================================
     call EsperarInvitacionB
     jmp Salir
@@ -192,7 +206,7 @@ main ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: MostrarMenuRol
-; Descripción: Muestra el menú para seleccionar rol y captura la entrada
+; Descripciï¿½n: Muestra el menï¿½ para seleccionar rol y captura la entrada
 ; ===================================================================
 MostrarMenuRol PROC
     pushad
@@ -238,8 +252,8 @@ EntradaInvalida:
     jmp CapturarEntrada
     
 EntradaValida:
-    ; Convertir a mayúscula y guardar
-    and al, 11011111b    ; Convertir a mayúscula
+    ; Convertir a mayï¿½scula y guardar
+    and al, 11011111b    ; Convertir a mayï¿½scula
     mov rol_seleccionado, al
     
     popad
@@ -248,7 +262,7 @@ MostrarMenuRol ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: IniciarPartidaA
-; Descripción: Lógica del Jugador A - crea partida y espera confirmación
+; Descripciï¿½n: Lï¿½gica del Jugador A - crea partida y espera confirmaciï¿½n
 ; ===================================================================
 IniciarPartidaA PROC
     pushad
@@ -271,7 +285,7 @@ IniciarPartidaA PROC
     call WriteString
     call Crlf
     
-    ; Esperar confirmación del Jugador B
+    ; Esperar confirmaciï¿½n del Jugador B
     call EsperarConfirmacionB
     
     ; Iniciar bucle de jugadas
@@ -297,7 +311,7 @@ IniciarPartidaA ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: EsperarInvitacionB
-; Descripción: Lógica del Jugador B - espera invitación y confirma
+; Descripciï¿½n: Lï¿½gica del Jugador B - espera invitaciï¿½n y confirma
 ; ===================================================================
 EsperarInvitacionB PROC
     pushad
@@ -328,8 +342,8 @@ EsperarInvitacionB ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: EscribirJSONIniciada
-; Descripción: Escribe el JSON inicial con estado "iniciada"
-; Retorna: EAX = 0 si error, 1 si éxito
+; Descripciï¿½n: Escribe el JSON inicial con estado "iniciada"
+; Retorna: EAX = 0 si error, 1 si ï¿½xito
 ; ===================================================================
 EscribirJSONIniciada PROC
     pushad
@@ -341,7 +355,7 @@ EscribirJSONIniciada PROC
     call WriteToFile
     mov bytes_escritos, eax
     
-    ; Verificar si se escribió correctamente
+    ; Verificar si se escribiï¿½ correctamente
     cmp eax, 0
     je ErrorEscribir
     
@@ -358,7 +372,7 @@ EscribirJSONIniciada ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: CerrarArchivo
-; Descripción: Cierra el archivo abierto
+; Descripciï¿½n: Cierra el archivo abierto
 ; ===================================================================
 CerrarArchivo PROC
     pushad
@@ -372,7 +386,7 @@ CerrarArchivo ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: EsperarConfirmacionB
-; Descripción: Espera a que el Jugador B confirme la invitación
+; Descripciï¿½n: Espera a que el Jugador B confirme la invitaciï¿½n
 ; ===================================================================
 EsperarConfirmacionB PROC
     pushad
@@ -414,8 +428,8 @@ EsperarConfirmacionB ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: CrearArchivoPartida
-; Descripción: Crea el archivo partida.json
-; Retorna: EAX = 0 si error, 1 si éxito
+; Descripciï¿½n: Crea el archivo partida.json
+; Retorna: EAX = 0 si error, 1 si ï¿½xito
 ; ===================================================================
 CrearArchivoPartida PROC
     pushad
@@ -425,7 +439,7 @@ CrearArchivoPartida PROC
     call CreateOutputFile
     mov handle_archivo, eax
     
-    ; Verificar si se creó correctamente
+    ; Verificar si se creï¿½ correctamente
     cmp eax, INVALID_HANDLE_VALUE
     je ErrorCrear
     
@@ -442,13 +456,13 @@ CrearArchivoPartida ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: VerificarJSONRecibida
-; Descripción: Compara buffer_json con json_recibida y muestra mensajes debug
+; Descripciï¿½n: Compara buffer_json con json_recibida y muestra mensajes debug
 ; Retorna: EAX = 1 si son iguales, 0 si no
 ; ===================================================================
 VerificarJSONRecibida PROC
     pushad
 
-    mov esi, OFFSET buffer_json      ; buffer leído del archivo
+    mov esi, OFFSET buffer_json      ; buffer leï¿½do del archivo
     mov edi, OFFSET json_recibida    ; cadena esperada
     mov ecx, LENGTHOF json_recibida - 1  ; longitud real (sin terminador)
     mov ebx, 0                       ; bandera de diferencia
@@ -504,8 +518,8 @@ VerificarJSONRecibida ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: BuscarPalabraRecibida
-; Descripción: Busca la palabra "recibida" en el buffer
-; Parámetros: EDX = offset del buffer
+; Descripciï¿½n: Busca la palabra "recibida" en el buffer
+; Parï¿½metros: EDX = offset del buffer
 ; Retorna: EAX = 1 si encuentra, 0 si no
 ; ===================================================================
 BuscarPalabraRecibida PROC
@@ -513,7 +527,7 @@ BuscarPalabraRecibida PROC
     
     mov esi, edx
     mov ecx, bytes_leidos
-    sub ecx, 7  ; Tamaño mínimo para contener "recibida"
+    sub ecx, 7  ; Tamaï¿½o mï¿½nimo para contener "recibida"
     
 BuscarLoop:
     cmp ecx, 0
@@ -543,7 +557,7 @@ BuscarPalabraRecibida ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: EsperarArchivoIniciada
-; Descripción: Espera a que exista el archivo con estado "iniciada"
+; Descripciï¿½n: Espera a que exista el archivo con estado "iniciada"
 ; ===================================================================
 EsperarArchivoIniciada PROC
     pushad
@@ -567,11 +581,11 @@ BucleEsperaArchivo:
     ; Cerrar archivo
     call CerrarArchivo
     
-    ; Verificar que se leyó algo
+    ; Verificar que se leyï¿½ algo
     cmp bytes_leidos, 0
     je ContinuarEsperaArchivo
     
-    ; Mostrar contenido leído para depuración
+    ; Mostrar contenido leï¿½do para depuraciï¿½n
     mov edx, OFFSET mensaje_debug
     call WriteString
     mov edx, OFFSET buffer_json
@@ -600,8 +614,8 @@ EsperarArchivoIniciada ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: BuscarPalabraIniciada
-; Descripción: Busca la palabra "iniciada" en el buffer
-; Parámetros: EDX = offset del buffer
+; Descripciï¿½n: Busca la palabra "iniciada" en el buffer
+; Parï¿½metros: EDX = offset del buffer
 ; Retorna: EAX = 1 si encuentra, 0 si no
 ; ===================================================================
 BuscarPalabraIniciada PROC
@@ -609,7 +623,7 @@ BuscarPalabraIniciada PROC
     
     mov esi, edx
     mov ecx, bytes_leidos
-    sub ecx, 7  ; Tamaño mínimo para contener "iniciada" (8 caracteres)
+    sub ecx, 7  ; Tamaï¿½o mï¿½nimo para contener "iniciada" (8 caracteres)
     
     ; Verificar que tenemos suficientes caracteres
     cmp ecx, 0
@@ -671,7 +685,7 @@ BuscarPalabraIniciada ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: ConfirmarInvitacion
-; Descripción: Modifica el archivo a estado "recibida"
+; Descripciï¿½n: Modifica el archivo a estado "recibida"
 ; ===================================================================
 ConfirmarInvitacion PROC
     pushad
@@ -696,7 +710,7 @@ ConfirmarInvitacion ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: BucleJugadasA
-; Descripción: Bucle principal de jugadas para el Jugador A
+; Descripciï¿½n: Bucle principal de jugadas para el Jugador A
 ; ===================================================================
 BucleJugadasA PROC
     pushad
@@ -719,14 +733,14 @@ BuclePrincipalA:
     mov edx, OFFSET turno_jugador
     call WriteString
 
-    ; Leer el número completo de la posición (ejemplo: 12)
+    ; Leer el nï¿½mero completo de la posiciï¿½n (ejemplo: 12)
     call ReadInt
     cmp eax, 0
-    je mostrar_error_fuera_rango    ; Si se ingresa un 0 o un valor inválido, mostrar error
+    je mostrar_error_fuera_rango    ; Si se ingresa un 0 o un valor invï¿½lido, mostrar error
 
-    ; Separar fila y columna del número ingresado
-    mov ebx, 10            ; Divisor para separar los dígitos (fila y columna)
-    mov edx, 0             ; Asegurarse de que EDX esté limpio antes de dividir
+    ; Separar fila y columna del nï¿½mero ingresado
+    mov ebx, 10            ; Divisor para separar los dï¿½gitos (fila y columna)
+    mov edx, 0             ; Asegurarse de que EDX estï¿½ limpio antes de dividir
     div ebx                ; EAX contiene la fila, EDX contiene la columna
 
     ; Guardar fila y columna
@@ -734,7 +748,7 @@ BuclePrincipalA:
     mov seleccion_columna, dl ; EDX tiene la columna
 
 
-     ; Verificar que la selección está dentro de los rangos válidos
+     ; Verificar que la selecciï¿½n estï¿½ dentro de los rangos vï¿½lidos
     cmp seleccion_fila, 1
     jb mostrar_error_fuera_rango
     cmp seleccion_fila, 8
@@ -745,19 +759,19 @@ BuclePrincipalA:
     cmp seleccion_columna, 8
     ja mostrar_error_fuera_rango
 
-    ; Calcular índice en la matriz para la selección
+    ; Calcular ï¿½ndice en la matriz para la selecciï¿½n
     mov al, seleccion_fila
-    sub al, 1            ; Convertir a índice basado en 0 (fila - 1)
-    mov bl, al           ; Guardar el índice de la fila en BL
+    sub al, 1            ; Convertir a ï¿½ndice basado en 0 (fila - 1)
+    mov bl, al           ; Guardar el ï¿½ndice de la fila en BL
 
     mov al, seleccion_columna
-    sub al, 1            ; Convertir a índice basado en 0 (columna - 1)
+    sub al, 1            ; Convertir a ï¿½ndice basado en 0 (columna - 1)
 
-    mov bh, 8            ; Tamaño de cada fila es 8
-    mov ah, 0            ; Asegurar que AH esté en 0 para evitar errores
+    mov bh, 8            ; Tamaï¿½o de cada fila es 8
+    mov ah, 0            ; Asegurar que AH estï¿½ en 0 para evitar errores
     mul bh               ; fila * 8
-    add al, bl           ; sumar la columna al resultado (AL contiene el índice correcto)
-    mov esi, eax         ; Guardar el índice de la pieza seleccionada en ESI
+    add al, bl           ; sumar la columna al resultado (AL contiene el ï¿½ndice correcto)
+    mov esi, eax         ; Guardar el ï¿½ndice de la pieza seleccionada en ESI
 
     ; Guardar la pieza seleccionada
     mov al, matriz[esi]  ; Cargar la pieza seleccionada de la matriz
@@ -783,7 +797,7 @@ BuclePrincipalA:
     sub al, '0'
     mov nueva_columna, al
 
-    ; Verificar que la selección está dentro de los rangos válidos
+    ; Verificar que la selecciï¿½n estï¿½ dentro de los rangos vï¿½lidos
     cmp nueva_fila, 1
     jb mostrar_error_fuera_rango
     cmp nueva_fila, 8
@@ -848,14 +862,14 @@ mostrar_error_fuera_rango:
 ; ===================================================================
 
 
-; VALIDACION DE MOVIMIENTOS PARA LAS PIEZAS EN MINÚSCULA
+; VALIDACION DE MOVIMIENTOS PARA LAS PIEZAS EN MINï¿½SCULA
 
 
 ; ===================================================================
 
 validar_movimiento_tmin:
-    ; Validar movimiento en línea recta para la pieza "t"
-    ; Movimiento válido si la fila es la misma o la columna es la misma
+    ; Validar movimiento en lï¿½nea recta para la pieza "t"
+    ; Movimiento vï¿½lido si la fila es la misma o la columna es la misma
 
     ; Verificar si la fila es la misma
     mov al, seleccion_fila
@@ -878,7 +892,7 @@ validar_movimiento_tmin:
 
 validar_movimiento_a_min:
     ; Validar movimiento en diagonal para la pieza "a"
-    ; Movimiento válido si la diferencia absoluta entre fila y columna es la misma
+    ; Movimiento vï¿½lido si la diferencia absoluta entre fila y columna es la misma
 
     ; Calcular diferencia de filas
     mov al, seleccion_fila
@@ -905,10 +919,10 @@ fila_no_negativa_a_min:
 columna_no_negativa_a_min:
 
     ; Comparar diferencias absolutas
-    cmp bl, bh               ; Si |diferencia filas| == |diferencia columnas|, es un movimiento válido
+    cmp bl, bh               ; Si |diferencia filas| == |diferencia columnas|, es un movimiento vï¿½lido
     je verificar_letra_destino_min
 
-    ; Si no se cumple la condición, mostrar error
+    ; Si no se cumple la condiciï¿½n, mostrar error
     call crlf
     mWrite "Error: Movimiento no valido. El alfil solo puede moverse en diagonal."
     call Crlf
@@ -917,20 +931,20 @@ columna_no_negativa_a_min:
 ; ===================================================================
 
 validar_movimiento_r_min:
-    ; Validar movimiento en línea recta (como la torre) o en diagonal (como el alfil)
+    ; Validar movimiento en lï¿½nea recta (como la torre) o en diagonal (como el alfil)
 
-    ; Primero, validar si se está moviendo como la torre (en línea recta)
+    ; Primero, validar si se estï¿½ moviendo como la torre (en lï¿½nea recta)
     ; Verificar si la fila es la misma
     mov al, seleccion_fila
     cmp al, nueva_fila
-    je verificar_letra_destino_min      ; Si las filas son iguales, el movimiento es válido como torre
+    je verificar_letra_destino_min      ; Si las filas son iguales, el movimiento es vï¿½lido como torre
 
     ; Verificar si la columna es la misma
     mov al, seleccion_columna
     cmp al, nueva_columna
-    je verificar_letra_destino_min     ; Si las columnas son iguales, el movimiento es válido como torre
+    je verificar_letra_destino_min     ; Si las columnas son iguales, el movimiento es vï¿½lido como torre
 
-    ; Si no se mueve en línea recta, validar si se está moviendo como el alfil (en diagonal)
+    ; Si no se mueve en lï¿½nea recta, validar si se estï¿½ moviendo como el alfil (en diagonal)
 
     ; Calcular diferencia de filas
     mov al, seleccion_fila
@@ -957,7 +971,7 @@ fila_no_negativa_r_min:
 columna_no_negativa_r_min:
 
     ; Comparar diferencias absolutas
-    cmp bl, bh               ; Si |diferencia filas| == |diferencia columnas|, es un movimiento válido como alfil
+    cmp bl, bh               ; Si |diferencia filas| == |diferencia columnas|, es un movimiento vï¿½lido como alfil
     je verificar_letra_destino_min
 
     ; Si no se cumple ninguna de las dos condiciones, mostrar error
@@ -996,22 +1010,22 @@ fila_no_negativa_c_min:
 columna_no_negativa_c_min:
 
     ; Validar los movimientos en "L" del caballo
-    ; Movimiento válido si (|fila| = 2 y |columna| = 1) o (|fila| = 1 y |columna| = 2)
+    ; Movimiento vï¿½lido si (|fila| = 2 y |columna| = 1) o (|fila| = 1 y |columna| = 2)
 
     cmp bl, 2
     je verificar_columna_1_min    ; Si la diferencia de filas es 2, verificar que la diferencia de columnas sea 1
     cmp bl, 1
     je verificar_columna_2_min    ; Si la diferencia de filas es 1, verificar que la diferencia de columnas sea 2
-    jmp movimiento_invalido_min    ; Si no se cumple ninguna de las condiciones, el movimiento es inválido
+    jmp movimiento_invalido_min    ; Si no se cumple ninguna de las condiciones, el movimiento es invï¿½lido
 
 verificar_columna_1_min:
     cmp bh, 1
-    je verificar_letra_destino_min       ; Si la diferencia de columnas es 1, el movimiento es válido
+    je verificar_letra_destino_min       ; Si la diferencia de columnas es 1, el movimiento es vï¿½lido
     jmp movimiento_invalido_min
 
 verificar_columna_2_min:
     cmp bh, 2
-    je verificar_letra_destino_min        ; Si la diferencia de columnas es 2, el movimiento es válido
+    je verificar_letra_destino_min        ; Si la diferencia de columnas es 2, el movimiento es vï¿½lido
     jmp movimiento_invalido_min
 
 movimiento_invalido_min:
@@ -1024,8 +1038,8 @@ movimiento_invalido_min:
 
 
 validar_movimiento_k_min:
-    ; Validar movimiento en cualquier dirección para la pieza "K"
-    ; El movimiento es válido si la diferencia en filas y columnas es de 1 o menos
+    ; Validar movimiento en cualquier direcciï¿½n para la pieza "K"
+    ; El movimiento es vï¿½lido si la diferencia en filas y columnas es de 1 o menos
 
     ; Calcular diferencia de filas
     mov al, seleccion_fila
@@ -1051,38 +1065,38 @@ fila_no_negativa_k_min:
 
 columna_no_negativa_k_min:
 
-    ; El movimiento es válido si la diferencia en filas y en columnas es 1 o menos
+    ; El movimiento es vï¿½lido si la diferencia en filas y en columnas es 1 o menos
     cmp bl, 1
-    ja movimiento_no_valido_k_min ; Si la diferencia en filas es mayor a 1, movimiento no válido
+    ja movimiento_no_valido_k_min ; Si la diferencia en filas es mayor a 1, movimiento no vï¿½lido
 
     cmp bh, 1
-    ja movimiento_no_valido_k_min ; Si la diferencia en columnas es mayor a 1, movimiento no válido
+    ja movimiento_no_valido_k_min ; Si la diferencia en columnas es mayor a 1, movimiento no vï¿½lido
 
-    ; Si las diferencias son válidas, verificar la letra en la posición de destino
+    ; Si las diferencias son vï¿½lidas, verificar la letra en la posiciï¿½n de destino
     jmp verificar_letra_destino_k_min
 
 movimiento_no_valido_k_min:
-    ; Si no se cumple la condición, mostrar error
+    ; Si no se cumple la condiciï¿½n, mostrar error
     call crlf
     mWrite "Error: Movimiento no valido. El rey solo puede moverse una casilla en cualquier direccion."
     call crlf
     jmp BuclePrincipalA
 
 verificar_letra_destino_k_min:
-    ; Calcular el índice de la nueva posición
+    ; Calcular el ï¿½ndice de la nueva posiciï¿½n
     mov al, nueva_fila
-    sub al, 1            ; Convertir a índice basado en 0
-    mov bl, al           ; Guardar el índice de la fila en BL
+    sub al, 1            ; Convertir a ï¿½ndice basado en 0
+    mov bl, al           ; Guardar el ï¿½ndice de la fila en BL
 
     mov al, nueva_columna
-    sub al, 1            ; Convertir a índice basado en 0
+    sub al, 1            ; Convertir a ï¿½ndice basado en 0
 
-    mov bh, 8            ; Tamaño de cada fila es 8
+    mov bh, 8            ; Tamaï¿½o de cada fila es 8
     mul bh               ; fila * 8
-    add al, bl           ; Sumar la columna al resultado (AL contiene el índice correcto)
-    mov edi, eax         ; Guardar el índice de la nueva posición en EDI
+    add al, bl           ; Sumar la columna al resultado (AL contiene el ï¿½ndice correcto)
+    mov edi, eax         ; Guardar el ï¿½ndice de la nueva posiciï¿½n en EDI
 
-    ; Cargar la letra en la posición de destino
+    ; Cargar la letra en la posiciï¿½n de destino
     mov al, matriz[edi]
 
     ; Verificar si la letra en destino es una de las prohibidas (p, t, a, c, r, k)
@@ -1110,7 +1124,7 @@ mostrar_error_k_min:
     jmp BuclePrincipalA
 
 movimiento_valido_k_min:
-    ; Realizar el movimiento si es válido
+    ; Realizar el movimiento si es vï¿½lido
     jmp realizar_movimiento
 
 
@@ -1118,8 +1132,8 @@ movimiento_valido_k_min:
 
 
 validar_movimiento_p_min:
-    ; Validar movimiento en línea recta para la pieza "P"
-    ; Movimiento válido si la fila es la misma o la columna es la misma
+    ; Validar movimiento en lï¿½nea recta para la pieza "P"
+    ; Movimiento vï¿½lido si la fila es la misma o la columna es la misma
 
     ; Verificar si la fila es la misma
     mov al, seleccion_fila
@@ -1135,22 +1149,22 @@ validar_movimiento_p_min:
 
 ; ===================================================================
 
-;Verificar que el destino no sean piezas minúsculas o del mismo bando
+;Verificar que el destino no sean piezas minï¿½sculas o del mismo bando
 verificar_letra_destino_min:
-    ; Calcular el índice de la nueva posición
+    ; Calcular el ï¿½ndice de la nueva posiciï¿½n
     mov al, nueva_fila
-    sub al, 1            ; Convertir a índice basado en 0
-    mov bl, al           ; Guardar el índice de la fila en BL
+    sub al, 1            ; Convertir a ï¿½ndice basado en 0
+    mov bl, al           ; Guardar el ï¿½ndice de la fila en BL
 
     mov al, nueva_columna
-    sub al, 1            ; Convertir a índice basado en 0
+    sub al, 1            ; Convertir a ï¿½ndice basado en 0
 
-    mov bh, 8            ; Tamaño de cada fila es 8
+    mov bh, 8            ; Tamaï¿½o de cada fila es 8
     mul bh               ; fila * 8
-    add al, bl           ; Sumar la columna al resultado (AL contiene el índice correcto)
-    mov edi, eax         ; Guardar el índice de la nueva posición en EDI
+    add al, bl           ; Sumar la columna al resultado (AL contiene el ï¿½ndice correcto)
+    mov edi, eax         ; Guardar el ï¿½ndice de la nueva posiciï¿½n en EDI
 
-    ; Cargar la letra en la posición de destino
+    ; Cargar la letra en la posiciï¿½n de destino
     mov al, matriz[edi]
 
     ; Verificar si la letra en destino es una de las prohibidas (P, T, A, C, R, K)
@@ -1182,41 +1196,41 @@ mostrar_error_min:
 
 ; ===================================================================
 movimiento_valido:
-    ; Realizar el movimiento si es válido
+    ; Realizar el movimiento si es vï¿½lido
     jmp realizar_movimiento
 
 
 realizar_movimiento:
-    ; Calcular la nueva posición en la matriz
+    ; Calcular la nueva posiciï¿½n en la matriz
     mov al, nueva_fila
-    sub al, 1            ; Convertir a índice en base 0
-    mov bl, al           ; Guardar el índice de la fila en BL
+    sub al, 1            ; Convertir a ï¿½ndice en base 0
+    mov bl, al           ; Guardar el ï¿½ndice de la fila en BL
 
     mov al, nueva_columna
-    sub al, 1            ; Convertir a índice en base 0
+    sub al, 1            ; Convertir a ï¿½ndice en base 0
 
-    mov bh, 8            ; Tamaño de cada fila es 8
+    mov bh, 8            ; Tamaï¿½o de cada fila es 8
     mul bh               ; fila * 8
-    add al, bl           ; sumar la columna al resultado (AL contiene el índice correcto)
-    mov edi, eax         ; Guardar el índice de la nueva posición en EDI
+    add al, bl           ; sumar la columna al resultado (AL contiene el ï¿½ndice correcto)
+    mov edi, eax         ; Guardar el ï¿½ndice de la nueva posiciï¿½n en EDI
 
     ; Verificar si se va a eliminar un rey ('K' o 'k')
-    mov al, matriz[edi]  ; Cargar la pieza en la nueva posición
+    mov al, matriz[edi]  ; Cargar la pieza en la nueva posiciï¿½n
     cmp al, 'K'
     je mostrar_victoria
     cmp al, 'k'
     je mostrar_victoria
 
-    ; Mover la pieza seleccionada a la nueva posición
+    ; Mover la pieza seleccionada a la nueva posiciï¿½n
     mov al, pieza        ; Cargar la pieza desde la variable 'pieza'
-    mov matriz[edi], al  ; Colocar la pieza en la nueva posición
+    mov matriz[edi], al  ; Colocar la pieza en la nueva posiciï¿½n
 
-    ; Limpiar la posición original después de validar el movimiento
-    mov matriz[esi], ' '  ; Dejar en blanco la posición original
+    ; Limpiar la posiciï¿½n original despuï¿½s de validar el movimiento
+    mov matriz[esi], ' '  ; Dejar en blanco la posiciï¿½n original
 
-    ; Mover el color de la letra a la nueva posición
+    ; Mover el color de la letra a la nueva posiciï¿½n
     mov al, colorLetraMatriz[esi]  ; Cargar el color de la pieza seleccionada
-    mov colorLetraMatriz[edi], al  ; Colocar el color en la nueva posición
+    mov colorLetraMatriz[edi], al  ; Colocar el color en la nueva posiciï¿½n
     call Crlf
     
     ; Mostrar jugada textual: "Jugada A: <pieza> <fi><co> -> <fi><co>"
@@ -1246,14 +1260,8 @@ realizar_movimiento:
     call imprimir_matriz
     call Crlf
 
-    ; Escribir JSON con estado/turn/fen requeridos
-    call EscribirJSONTurnFenW
-
-    ; Esperar respuesta de B
-    mov edx, OFFSET esperando_jugada
-    call WriteString
-    call Crlf
-    call EsperarJugadaB
+    ; Actualizar archivo con estado/turn/fen y esperar turno 'b'
+    mActualizarPartidaYEsperarB
 
     jmp BuclePrincipalA  ; Regresar al ciclo de movimiento tras respuesta de B
 
@@ -1280,7 +1288,7 @@ mostrar_victoria:
     ;mov edx, OFFSET buffer_entrada
     ;mov ecx, SIZEOF buffer_entrada
     ;call ReadString
-    ;mov bytes_escritos, eax ; Guardar cantidad de caracteres leídos
+    ;mov bytes_escritos, eax ; Guardar cantidad de caracteres leï¿½dos
 
 
 
@@ -1314,7 +1322,7 @@ BucleJugadasA ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: BucleJugadasB
-; Descripción: Bucle principal de jugadas para el Jugador B
+; Descripciï¿½n: Bucle principal de jugadas para el Jugador B
 ; ===================================================================
 BucleJugadasB PROC
     pushad
@@ -1358,7 +1366,7 @@ BucleJugadasB ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: EscribirJugadaA
-; Descripción: Escribe la jugada del Jugador A en el archivo JSON
+; Descripciï¿½n: Escribe la jugada del Jugador A en el archivo JSON
 ; ===================================================================
 EscribirJugadaA PROC
     pushad
@@ -1384,7 +1392,7 @@ EscribirJugadaA PROC
     ; Escribir la jugada (usar longitud real)
     mov eax, handle_archivo
     mov edx, OFFSET buffer_entrada
-    mov ecx, bytes_escritos ; Usar la cantidad de caracteres leídos
+    mov ecx, bytes_escritos ; Usar la cantidad de caracteres leï¿½dos
     call WriteToFile
 
     ; Escribir cierre del JSON
@@ -1407,7 +1415,7 @@ EscribirJugadaA ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: EscribirJugadaB
-; Descripción: Escribe la jugada del Jugador B en el archivo JSON
+; Descripciï¿½n: Escribe la jugada del Jugador B en el archivo JSON
 ; ===================================================================
 EscribirJugadaB PROC
     pushad
@@ -1426,7 +1434,7 @@ EscribirJugadaB PROC
     ; Escribir la jugada
     mov eax, handle_archivo
     mov edx, OFFSET buffer_entrada
-    mov ecx, eax  ; Tamaño de la cadena leída
+    mov ecx, eax  ; Tamaï¿½o de la cadena leï¿½da
     call WriteToFile
     
     ; Escribir cierre del JSON
@@ -1449,15 +1457,41 @@ EscribirJugadaB ENDP
 EscribirJSONTurnFenW PROC
     pushad
 
+    ; Construir FEN desde la matriz actual en buffer_fen
+    call BuildFenFromMatriz
+
     ; Abrir/crear archivo para escritura
     mov edx, OFFSET archivo_partida
     call CreateOutputFile
     mov handle_archivo, eax
 
-    ; Escribir JSON completo solicitado
+    ; Escribir prefijo JSON {"estado":..., "turn": "w", "fen": "
     mov eax, handle_archivo
-    mov edx, OFFSET json_estado_turn_fen_w
-    mov ecx, LENGTHOF json_estado_turn_fen_w - 1
+    mov edx, OFFSET json_estado_turn_fen_prefix
+    mov ecx, LENGTHOF json_estado_turn_fen_prefix - 1
+    call WriteToFile
+
+    ; Escribir FEN dinÃ¡mico
+    ; Calcular longitud del buffer_fen (hasta 0)
+    mov esi, OFFSET buffer_fen
+    xor ecx, ecx
+@@
+    ; loop para contar longitud
+FenLenLoop:
+    mov al, [esi+ecx]
+    cmp al, 0
+    je FenLenDone
+    inc ecx
+    jmp FenLenLoop
+FenLenDone:
+    mov eax, handle_archivo
+    mov edx, OFFSET buffer_fen
+    call WriteToFile
+
+    ; Escribir cierre "}
+    mov eax, handle_archivo
+    mov edx, OFFSET json_cierre
+    mov ecx, LENGTHOF json_cierre - 1
     call WriteToFile
 
     ; Cerrar archivo
@@ -1468,8 +1502,163 @@ EscribirJSONTurnFenW PROC
 EscribirJSONTurnFenW ENDP
 
 ; ===================================================================
+; PROCEDIMIENTO: BuildFenFromMatriz
+; DescripciÃ³n: Construye en buffer_fen el FEN del tablero actual
+;              a partir de la matriz (fila 8 a 1). Agrega sufijo
+;              " w KQkq - 0 1" al final.
+; ===================================================================
+BuildFenFromMatriz PROC
+    pushad
+
+    ; EDI -> donde escribir FEN
+    mov edi, OFFSET buffer_fen
+    ; limpiar buffer (opcional, escribimos terminador al final)
+
+    ; EBP = Ã­ndice de fila (7..0)
+    mov ebp, 7
+
+FilaLoop:
+    ; DL = contador de espacios vacÃ­os consecutivos en la fila
+    xor edx, edx
+
+    ; ESI = base de la fila (fila*8)
+    mov esi, ebp
+    imul esi, 8
+
+    ; ECX = 8 columnas
+    mov ecx, 8
+
+ColLoop:
+    mov al, matriz[esi]
+    cmp al, ' '
+    je CeldaVacia
+
+    ; Si habÃ­a vacÃ­os pendientes, emitir dÃ­gito
+    cmp dl, 0
+    je NoVaciosPend
+    mov bl, dl
+    add bl, '0'
+    mov [edi], bl
+    inc edi
+    xor dl, dl
+NoVaciosPend:
+
+    ; Mapear pieza local (T,C,A,R,K,P / t,c,a,r,k,p) a FEN estÃ¡ndar
+    ; minusculas (negras)
+    cmp al, 't'
+    jne chk_c_min
+    mov al, 'r'
+    jmp EmitPieza
+chk_c_min:
+    cmp al, 'c'
+    jne chk_a_min
+    mov al, 'n'
+    jmp EmitPieza
+chk_a_min:
+    cmp al, 'a'
+    jne chk_r_min
+    mov al, 'b'
+    jmp EmitPieza
+chk_r_min:
+    cmp al, 'r'
+    jne chk_k_min
+    mov al, 'q'
+    jmp EmitPieza
+chk_k_min:
+    cmp al, 'k'
+    jne chk_p_min
+    mov al, 'k'
+    jmp EmitPieza
+chk_p_min:
+    cmp al, 'p'
+    jne chk_T_may
+    mov al, 'p'
+    jmp EmitPieza
+
+    ; mayÃºsculas (blancas)
+chk_T_may:
+    cmp al, 'T'
+    jne chk_C_may
+    mov al, 'R'
+    jmp EmitPieza
+chk_C_may:
+    cmp al, 'C'
+    jne chk_A_may
+    mov al, 'N'
+    jmp EmitPieza
+chk_A_may:
+    cmp al, 'A'
+    jne chk_R_may
+    mov al, 'B'
+    jmp EmitPieza
+chk_R_may:
+    cmp al, 'R'
+    jne chk_K_may
+    mov al, 'Q'
+    jmp EmitPieza
+chk_K_may:
+    cmp al, 'K'
+    jne chk_P_may
+    mov al, 'K'
+    jmp EmitPieza
+chk_P_may:
+    cmp al, 'P'
+    jne EmitPieza
+    mov al, 'P'
+
+EmitPieza:
+    mov [edi], al
+    inc edi
+    jmp SiguienteCol
+
+CeldaVacia:
+    inc dl
+
+SiguienteCol:
+    inc esi
+    loop ColLoop
+
+    ; Al finalizar la fila, si quedan vacÃ­os, emitir dÃ­gito
+    cmp dl, 0
+    je NoVaciosFinFila
+    mov bl, dl
+    add bl, '0'
+    mov [edi], bl
+    inc edi
+    xor dl, dl
+NoVaciosFinFila:
+
+    ; Agregar '/' entre filas excepto despuÃ©s de la Ãºltima (fila 0)
+    cmp ebp, 0
+    je UltimaFila
+    mov byte ptr [edi], '/'
+    inc edi
+UltimaFila:
+
+    dec ebp
+    cmp ebp, -1
+    jne FilaLoop
+
+    ; Agregar sufijo de FEN
+    mov esi, OFFSET fen_suffix
+AddSufLoop:
+    lodsb
+    cmp al, 0
+    je FinFen
+    stosb
+    jmp AddSufLoop
+
+FinFen:
+    ; Terminar con 0
+    mov byte ptr [edi], 0
+
+    popad
+    ret
+BuildFenFromMatriz ENDP
+
+; ===================================================================
 ; PROCEDIMIENTO: EsperarJugadaA
-; Descripción: Espera a que el Jugador A haga su jugada
+; Descripciï¿½n: Espera a que el Jugador A haga su jugada
 ; ===================================================================
 EsperarJugadaA PROC
     pushad
@@ -1512,7 +1701,7 @@ EsperarJugadaA ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: EsperarJugadaB
-; Descripción: Espera a que el Jugador B haga su jugada
+; Descripciï¿½n: Espera a que el Jugador B haga su jugada
 ; ===================================================================
 EsperarJugadaB PROC
     pushad
@@ -1555,8 +1744,8 @@ EsperarJugadaB ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: BuscarJugadorA
-; Descripción: Busca "jugadorA" en el buffer
-; Parámetros: EDX = offset del buffer
+; Descripciï¿½n: Busca "jugadorA" en el buffer
+; Parï¿½metros: EDX = offset del buffer
 ; Retorna: EAX = 1 si encuentra, 0 si no
 ; ===================================================================
 BuscarJugadorA PROC
@@ -1564,7 +1753,7 @@ BuscarJugadorA PROC
     
     mov esi, edx
     mov ecx, bytes_leidos
-    sub ecx, 7  ; Tamaño mínimo para contener "jugadorA"
+    sub ecx, 7  ; Tamaï¿½o mï¿½nimo para contener "jugadorA"
     
 BuscarJugadorALoop:
     cmp ecx, 0
@@ -1622,8 +1811,8 @@ BuscarJugadorA ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: BuscarJugadorB
-; Descripción: Busca "jugadorB" en el buffer
-; Parámetros: EDX = offset del buffer
+; Descripciï¿½n: Busca "jugadorB" en el buffer
+; Parï¿½metros: EDX = offset del buffer
 ; Retorna: EAX = 1 si encuentra, 0 si no
 ; ===================================================================
 BuscarJugadorB PROC
@@ -1631,7 +1820,7 @@ BuscarJugadorB PROC
     
     mov esi, edx
     mov ecx, bytes_leidos
-    sub ecx, 7  ; Tamaño mínimo para contener "jugadorB"
+    sub ecx, 7  ; Tamaï¿½o mï¿½nimo para contener "jugadorB"
     
 BuscarJugadorBLoop:
     cmp ecx, 0
@@ -1721,15 +1910,15 @@ BuscarTurnoB ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: VerificarFinPartida
-; Descripción: Verifica si la partida debe terminar
-; Retorna: EAX = 1 si debe terminar, 0 si continúa
+; Descripciï¿½n: Verifica si la partida debe terminar
+; Retorna: EAX = 1 si debe terminar, 0 si continï¿½a
 ; ===================================================================
 VerificarFinPartida PROC
     pushad
     
-    ; Por simplicidad, en esta implementación básica
-    ; la partida continúa hasta que el usuario presione 'q' para salir
-    ; En una implementación completa, aquí se verificarían condiciones
+    ; Por simplicidad, en esta implementaciï¿½n bï¿½sica
+    ; la partida continï¿½a hasta que el usuario presione 'q' para salir
+    ; En una implementaciï¿½n completa, aquï¿½ se verificarï¿½an condiciones
     ; como jaque mate, tablas, etc.
     
     ; Por ahora, siempre retornamos 0 (continuar)
@@ -1741,16 +1930,16 @@ VerificarFinPartida ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: Procesos Para el juego
-; Descripción: Diferentes procesos para manejar la jugabilidad
+; Descripciï¿½n: Diferentes procesos para manejar la jugabilidad
 ; ===================================================================
 imprimir_matriz PROC
     ; Fila 8
     mWrite "                 "
-    mov eax, 15             ; Asegurar que el color del índice es blanco
+    mov eax, 15             ; Asegurar que el color del ï¿½ndice es blanco
     call SetTextColor
-    mov edx, OFFSET fila8    ; Imprimir el número de la fila
+    mov edx, OFFSET fila8    ; Imprimir el nï¿½mero de la fila
     call WriteString
-    mov esi, 56              ; Índice para la fila 8 (T, C, A, R, K, A, C, T)
+    mov esi, 56              ; ï¿½ndice para la fila 8 (T, C, A, R, K, A, C, T)
     call imprimir_letra       ; Imprimir letras de la fila
     call imprimir_letra
     call imprimir_letra
@@ -1771,11 +1960,11 @@ imprimir_matriz PROC
 
     ; Fila 7
     mWrite "                 "
-    mov eax, 15             ; Asegurar que el color del índice es blanco
+    mov eax, 15             ; Asegurar que el color del ï¿½ndice es blanco
     call SetTextColor
-    mov edx, OFFSET fila7    ; Imprimir el número de la fila
+    mov edx, OFFSET fila7    ; Imprimir el nï¿½mero de la fila
     call WriteString
-    mov esi, 48              ; Índice para la fila 7 (P, P, P, P, P, P, P, P)
+    mov esi, 48              ; ï¿½ndice para la fila 7 (P, P, P, P, P, P, P, P)
     call imprimir_letra       ; Imprimir letras de la fila
     call imprimir_letra
     call imprimir_letra
@@ -1795,11 +1984,11 @@ imprimir_matriz PROC
 
     ; Fila 6
     mWrite "                 "
-    mov eax, 15             ; Asegurar que el color del índice es blanco
+    mov eax, 15             ; Asegurar que el color del ï¿½ndice es blanco
     call SetTextColor
-    mov edx, OFFSET fila6    ; Imprimir el número de la fila
+    mov edx, OFFSET fila6    ; Imprimir el nï¿½mero de la fila
     call WriteString
-    mov esi, 40              ; Índice para la fila 6
+    mov esi, 40              ; ï¿½ndice para la fila 6
     call imprimir_letra       ; Imprimir letras de la fila
     call imprimir_letra
     call imprimir_letra
@@ -1819,11 +2008,11 @@ imprimir_matriz PROC
 
     ; Fila 5
     mWrite "                 "
-    mov eax, 15             ; Asegurar que el color del índice es blanco
+    mov eax, 15             ; Asegurar que el color del ï¿½ndice es blanco
     call SetTextColor
-    mov edx, OFFSET fila5    ; Imprimir el número de la fila
+    mov edx, OFFSET fila5    ; Imprimir el nï¿½mero de la fila
     call WriteString
-    mov esi, 32              ; Índice para la fila 5
+    mov esi, 32              ; ï¿½ndice para la fila 5
     call imprimir_letra       ; Imprimir letras de la fila
     call imprimir_letra
     call imprimir_letra
@@ -1843,11 +2032,11 @@ imprimir_matriz PROC
 
     ; Fila 4
     mWrite "                 "
-    mov eax, 15             ; Asegurar que el color del índice es blanco
+    mov eax, 15             ; Asegurar que el color del ï¿½ndice es blanco
     call SetTextColor
-    mov edx, OFFSET fila4    ; Imprimir el número de la fila
+    mov edx, OFFSET fila4    ; Imprimir el nï¿½mero de la fila
     call WriteString
-    mov esi, 24              ; Índice para la fila 4
+    mov esi, 24              ; ï¿½ndice para la fila 4
     call imprimir_letra       ; Imprimir letras de la fila
     call imprimir_letra
     call imprimir_letra
@@ -1867,11 +2056,11 @@ imprimir_matriz PROC
 
     ; Fila 3
     mWrite "                 "
-    mov eax, 15             ; Asegurar que el color del índice es blanco
+    mov eax, 15             ; Asegurar que el color del ï¿½ndice es blanco
     call SetTextColor
-    mov edx, OFFSET fila3    ; Imprimir el número de la fila
+    mov edx, OFFSET fila3    ; Imprimir el nï¿½mero de la fila
     call WriteString
-    mov esi, 16              ; Índice para la fila 3
+    mov esi, 16              ; ï¿½ndice para la fila 3
     call imprimir_letra       ; Imprimir letras de la fila
     call imprimir_letra
     call imprimir_letra
@@ -1891,11 +2080,11 @@ imprimir_matriz PROC
 
     ; Fila 2
     mWrite "                 "
-    mov eax, 15             ; Asegurar que el color del índice es blanco
+    mov eax, 15             ; Asegurar que el color del ï¿½ndice es blanco
     call SetTextColor
-    mov edx, OFFSET fila2    ; Imprimir el número de la fila
+    mov edx, OFFSET fila2    ; Imprimir el nï¿½mero de la fila
     call WriteString
-    mov esi, 8               ; Índice para la fila 2
+    mov esi, 8               ; ï¿½ndice para la fila 2
     call imprimir_letra       ; Imprimir letras de la fila
     call imprimir_letra
     call imprimir_letra
@@ -1915,11 +2104,11 @@ imprimir_matriz PROC
 
     ; Fila 1
     mWrite "                 "
-    mov eax, 15             ; Asegurar que el color del índice es blanco
+    mov eax, 15             ; Asegurar que el color del ï¿½ndice es blanco
     call SetTextColor
-    mov edx, OFFSET fila1    ; Imprimir el número de la fila
+    mov edx, OFFSET fila1    ; Imprimir el nï¿½mero de la fila
     call WriteString
-    mov esi, 0               ; Índice para la fila 1
+    mov esi, 0               ; ï¿½ndice para la fila 1
     call imprimir_letra       ; Imprimir letras de la fila
     call imprimir_letra
     call imprimir_letra
@@ -1937,7 +2126,7 @@ imprimir_matriz PROC
     call imprimir_espacios_negros ; Imprimir espacios negros al lado de fin1
     call Crlf
 
-    ; Imprimir los números de las columnas
+    ; Imprimir los nï¿½meros de las columnas
     mov eax, 15              ; Asegurar que el color de las columnas sea blanco
     call SetTextColor
     mov edx, OFFSET columnas
@@ -1949,7 +2138,7 @@ imprimir_matriz ENDP
 
 imprimir_espacios_negros PROC
     ; Imprimir algunos espacios negros a la derecha del finX
-    mov ecx, 10              ; Número de espacios a imprimir (ajustable)
+    mov ecx, 10              ; Nï¿½mero de espacios a imprimir (ajustable)
 ciclo_espacios:
     mov edx, OFFSET espacio
     call WriteString
@@ -1978,10 +2167,10 @@ mWrite " "                          ; Espacio antes de la letra para que sea vea
     ; Verificar si la letra debe ser roja (valor 1 en colorLetraMatriz)
     mov al, colorLetraMatriz[esi]
     cmp al, 1
-    jne imprimir_caracter      ; Si no es especial, seguir con la impresión normal
+    jne imprimir_caracter      ; Si no es especial, seguir con la impresiï¿½n normal
 
     ; Si es una letra especial, cambiar el color del texto a rojo
-    mov ah, al                ; Guardar el carácter en AH para preservarlo
+    mov ah, al                ; Guardar el carï¿½cter en AH para preservarlo
     mov eax, 0                ; Limpiar eax
     call GetTextColor         ; Obtener el color actual de la consola
     and eax, 0F0h             ; Mantener los 4 bits superiores (color de fondo)
@@ -1993,11 +2182,11 @@ imprimir_caracter:
     mov al, matriz[esi]
     call WriteChar
 
-    ;mWrite " "       ; Espacio para cambiar el ancho          <···················################################·····················
+    ;mWrite " "       ; Espacio para cambiar el ancho          <ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½################################ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     ; Restaurar el color del texto a blanco si fue modificado
     cmp al, 'T'
     jne continuar
-    ; Restaurar el color del texto a blanco después de la 'T'
+    ; Restaurar el color del texto a blanco despuï¿½s de la 'T'
     mov al, colorMatriz[esi]
     cmp al, 1
     je fondo_negro_restaurar
@@ -2014,7 +2203,7 @@ continuar:
     ; Espacio despues de la letra
     mWrite " "
 
-    ; Incrementar el índice de la matriz
+    ; Incrementar el ï¿½ndice de la matriz
     add esi, 1
     ret
 imprimir_letra ENDP
