@@ -56,6 +56,9 @@ include Macros.inc
     json_jugador_b   BYTE '{"jugadorB": "', 0
     json_cierre      BYTE '"}', 0
     
+    ; JSON completo requerido tras jugada de A
+    json_estado_turn_fen_w BYTE '{"estado": "recibida", "turn": "w", "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}', 0
+    
     ; ===================================================================
     ; MENSAJES DE ERROR
     ; ===================================================================
@@ -73,6 +76,10 @@ include Macros.inc
     mensaje_no_encontrado BYTE "DEBUG: Palabra 'iniciada' NO encontrada, continuando...", 0
     mensaje_encontrado_recibida BYTE "DEBUG: Palabra 'recibida' encontrada!", 0
     mensaje_debug_jugada_a BYTE "DEBUG: Escribiendo jugada de Jugador A: ", 0
+    
+    ; Mensajes de jugada
+    mensaje_jugada_a BYTE "Jugada A: ", 0
+    flecha           BYTE " -> ", 0
 
     ; ===================================================================
     ; Datos del tablero de ajedrez
@@ -391,9 +398,7 @@ BucleEspera:
 
     ; Verificar si el JSON es igual a json_recibida
     call VerificarJSONRecibida
-    mov eax, eax
-    mov al, confirmacion_recibida
-    cmp eax, 1
+    cmp byte ptr confirmacion_recibida, 1
     je ConfirmacionRecibida
 
 ContinuarEspera:
@@ -445,7 +450,7 @@ VerificarJSONRecibida PROC
 
     mov esi, OFFSET buffer_json      ; buffer leído del archivo
     mov edi, OFFSET json_recibida    ; cadena esperada
-    mov ecx, LENGTHOF json_recibida  ; longitud de la cadena esperada
+    mov ecx, LENGTHOF json_recibida - 1  ; longitud real (sin terminador)
     mov ebx, 0                       ; bandera de diferencia
 
 CompararLoop:
@@ -1213,8 +1218,44 @@ realizar_movimiento:
     mov al, colorLetraMatriz[esi]  ; Cargar el color de la pieza seleccionada
     mov colorLetraMatriz[edi], al  ; Colocar el color en la nueva posición
     call Crlf
+    
+    ; Mostrar jugada textual: "Jugada A: <pieza> <fi><co> -> <fi><co>"
+    mov edx, OFFSET mensaje_jugada_a
+    call WriteString
+    mov al, pieza
+    call WriteChar
+    mWrite " "
+    mov al, seleccion_fila
+    add al, '0'
+    call WriteChar
+    mov al, seleccion_columna
+    add al, '0'
+    call WriteChar
+    mov edx, OFFSET flecha
+    call WriteString
+    mov al, nueva_fila
+    add al, '0'
+    call WriteChar
+    mov al, nueva_columna
+    add al, '0'
+    call WriteChar
     call Crlf
-    jmp BuclePrincipalA  ; Regresar al ciclo de movimiento
+    call Crlf
+    
+    ; Reimprimir visualmente el tablero actualizado
+    call imprimir_matriz
+    call Crlf
+
+    ; Escribir JSON con estado/turn/fen requeridos
+    call EscribirJSONTurnFenW
+
+    ; Esperar respuesta de B
+    mov edx, OFFSET esperando_jugada
+    call WriteString
+    call Crlf
+    call EsperarJugadaB
+
+    jmp BuclePrincipalA  ; Regresar al ciclo de movimiento tras respuesta de B
 
 mostrar_victoria:
     ; Mostrar el mensaje de victoria y terminar el juego
@@ -1402,6 +1443,31 @@ EscribirJugadaB PROC
 EscribirJugadaB ENDP
 
 ; ===================================================================
+; PROCEDIMIENTO: EscribirJSONTurnFenW
+; DescripciÃ³n: Escribe el JSON requerido con estado/turn/fen tras jugada de A
+; ===================================================================
+EscribirJSONTurnFenW PROC
+    pushad
+
+    ; Abrir/crear archivo para escritura
+    mov edx, OFFSET archivo_partida
+    call CreateOutputFile
+    mov handle_archivo, eax
+
+    ; Escribir JSON completo solicitado
+    mov eax, handle_archivo
+    mov edx, OFFSET json_estado_turn_fen_w
+    mov ecx, LENGTHOF json_estado_turn_fen_w - 1
+    call WriteToFile
+
+    ; Cerrar archivo
+    call CerrarArchivo
+
+    popad
+    ret
+EscribirJSONTurnFenW ENDP
+
+; ===================================================================
 ; PROCEDIMIENTO: EsperarJugadaA
 ; Descripción: Espera a que el Jugador A haga su jugada
 ; ===================================================================
@@ -1470,9 +1536,9 @@ BucleEsperaJugadaB:
     ; Cerrar archivo
     call CerrarArchivo
     
-    ; Buscar "jugadorB" en el buffer
+    ; Buscar cambio de turno a 'b' en el buffer
     mov edx, OFFSET buffer_json
-    call BuscarJugadorB
+    call BuscarTurnoB
     cmp eax, 1
     je JugadaRecibidaB
     
@@ -1593,6 +1659,65 @@ FinBuscarJugadorB:
     popad
     ret
 BuscarJugadorB ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: BuscarTurnoB
+; DescripciÃ³n: Busca la secuencia 'turn": "b' en el buffer
+; ParÃ¡metros: EDX = offset del buffer
+; Retorna: EAX = 1 si encuentra, 0 si no
+; ===================================================================
+BuscarTurnoB PROC
+    pushad
+    mov esi, edx
+    mov ecx, bytes_leidos
+    sub ecx, 9
+
+BuscarTurnoBLoop:
+    cmp ecx, 0
+    jle NoEncontradoTurnoB
+
+    mov al, [esi]
+    cmp al, 't'
+    jne SiguienteTurnoB
+    mov al, [esi+1]
+    cmp al, 'u'
+    jne SiguienteTurnoB
+    mov al, [esi+2]
+    cmp al, 'r'
+    jne SiguienteTurnoB
+    mov al, [esi+3]
+    cmp al, 'n'
+    jne SiguienteTurnoB
+    mov al, [esi+4]
+    cmp al, '"'
+    jne SiguienteTurnoB
+    mov al, [esi+5]
+    cmp al, ':'
+    jne SiguienteTurnoB
+    mov al, [esi+6]
+    cmp al, ' '
+    jne SiguienteTurnoB
+    mov al, [esi+7]
+    cmp al, '"'
+    jne SiguienteTurnoB
+    mov al, [esi+8]
+    cmp al, 'b'
+    jne SiguienteTurnoB
+    mov eax, 1
+    jmp FinBuscarTurnoB
+
+SiguienteTurnoB:
+    inc esi
+    dec ecx
+    jmp BuscarTurnoBLoop
+
+NoEncontradoTurnoB:
+    mov eax, 0
+
+FinBuscarTurnoB:
+    popad
+    ret
+BuscarTurnoB ENDP
 
 ; ===================================================================
 ; PROCEDIMIENTO: VerificarFinPartida
