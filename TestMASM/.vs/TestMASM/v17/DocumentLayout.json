@@ -1,0 +1,42 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\JeanC\\OneDrive\\Desktop\\TestMASM\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{151EE977-A2DE-4D78-B56D-9EF65257BA1F}|TestMASM.vcxproj|C:\\Users\\JeanC\\OneDrive\\Desktop\\TestMASM\\test32.asm||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{151EE977-A2DE-4D78-B56D-9EF65257BA1F}|TestMASM.vcxproj|solutionrelative:test32.asm||{8B382828-6202-11D1-8870-0000F87579D2}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 333,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "test32.asm",
+              "DocumentMoniker": "C:\\Users\\JeanC\\OneDrive\\Desktop\\TestMASM\\test32.asm",
+              "RelativeDocumentMoniker": "test32.asm",
+              "ToolTip": "C:\\Users\\JeanC\\OneDrive\\Desktop\\TestMASM\\test32.asm",
+              "RelativeToolTip": "test32.asm",
+              "ViewState": "AgIAALIAAAAAAAAAAAAlwMEAAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2025-09-24T22:47:25.768Z",
+              "IsPinned": true,
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

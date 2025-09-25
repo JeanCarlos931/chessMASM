@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+
+
+
+
+<exchangeRates>	
+	
+		
+			 
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+					<country>
+						<name>Costa Rica</name>
+						<buyRateUSD>501.00</buyRateUSD>
+						<saleRateUSD>515.00</saleRateUSD>
+						
+							
+						
+							
+						
+							
+						
+							
+								<buyRateEUR>579.98</buyRateEUR>
+								<saleRateEUR>602.18</saleRateEUR>
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+						<link>
+							
+						</link>
+					</country>
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+					<country>
+						<name>El Salvador</name>
+						<buyRateUSD>1.0000</buyRateUSD>
+						<saleRateUSD>1.0000</saleRateUSD>
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+								<buyRateEUR>1.1496</buyRateEUR>
+								<saleRateEUR>1.2096</saleRateEUR>
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+						<link>
+							
+						</link>
+					</country>
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+					<country>
+						<name>Guatemala</name>
+						<buyRateUSD>7.46</buyRateUSD>
+						<saleRateUSD>7.86</saleRateUSD>
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+								<buyRateEUR>7.76</buyRateEUR>
+								<saleRateEUR>9.59</saleRateEUR>
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+						<link>
+							
+						</link>
+					</country>
+				
+			
+		
+			 
+				
+					<country>
+						<name>Guatemala zona mar�tima</name>
+						<buyRateUSD>1.00</buyRateUSD>
+						<saleRateUSD>1.00</saleRateUSD>
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+								<buyRateEUR>0.00</buyRateEUR>
+								<saleRateEUR>0.00</saleRateEUR>
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+						<link>
+							
+						</link>
+					</country>
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+					<country>
+						<name>Honduras</name>
+						<buyRateUSD>26.0519</buyRateUSD>
+						<saleRateUSD>26.1822</saleRateUSD>
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+								<buyRateEUR>29.1781</buyRateEUR>
+								<saleRateEUR>33.1205</saleRateEUR>
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+						<link>
+							
+						</link>
+					</country>
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+					<country>
+						<name>Nicaragua</name>
+						<buyRateUSD>36.16</buyRateUSD>
+						<saleRateUSD>37.00</saleRateUSD>
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+								<buyRateEUR>40.52</buyRateEUR>
+								<saleRateEUR>44.79</saleRateEUR>
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+						<link>
+							
+						</link>
+					</country>
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+			
+		
+			 
+				
+					<country>
+						<name>Panam�</name>
+						<buyRateUSD>1.00</buyRateUSD>
+						<saleRateUSD>1.00</saleRateUSD>
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+						
+							
+								<buyRateEUR>1.15</buyRateEUR>
+								<saleRateEUR>1.19</saleRateEUR>
+							
+						
+							
+						
+						<link>
+							
+						</link>
+					</country>
+				
+			
+		
+			 
+				
+			
+		
+		
+</exchangeRates>

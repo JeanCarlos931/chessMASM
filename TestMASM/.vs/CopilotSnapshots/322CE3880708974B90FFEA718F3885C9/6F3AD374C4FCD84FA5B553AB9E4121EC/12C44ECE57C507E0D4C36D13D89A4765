@@ -1,0 +1,156 @@
+﻿;ejercicio 5: Cuenta vocales y consonantes
+include irvine32.inc
+
+.data
+    ;mensajes
+    msgVocales BYTE "Numero de vocales: ", 0
+    msgConsonantes BYTE "Numero de consonantes: ", 0
+
+    ;mensaje a analizar
+    frase BYTE "La Universidad UTN era mi quinta opcion, pero ya no",0           
+    
+    ;variables
+    vocales dd 0                       ; Contador de vocales
+    consonantes dd 0                   ; Contador de consonantes
+    
+.code
+main PROC
+    mov edx, offset frase      ; Mostrar la frase
+    call writestring
+    call crlf
+
+    mov edx, offset frase      ; Cargar dirección de la frase           
+    call countLetters              
+
+    ; Mostrar resultado vocales
+    mov edx, offset msgVocales
+    call writestring
+    mov eax, vocales
+    call writeint
+    call crlf
+
+    ; Mostrar resultado consonantes
+    mov edx, offset msgConsonantes
+    call writestring
+    mov eax, consonantes
+    call writeint
+    call crlf
+
+    call WaitMsg           ; Esperar antes de cerrar
+    exit                         
+main ENDP
+
+; Función para contar vocales y consonantes
+countLetters PROC
+    mov ecx, 0                    
+    mov ebx, 0                    
+
+next_char:
+    mov al, [edx + ebx]           ; Obtener caracter actual
+    cmp al, 0                     ; Verificar fin de cadena (null terminator)
+    je done                       
+    
+    call isVowel                  ; Verifica si es vocal
+    call isConsonant              ; Verifica si es consonante
+    
+    inc ebx                       ; Mover al siguiente caracter
+    jmp next_char                 
+
+done:
+    ret
+countLetters ENDP
+
+; Función para verificar si un caracter es una vocal
+isVowel PROC
+    cmp al, 'a'                   ; Compara con 'a'
+    je increment_vowel
+    cmp al, 'e'                   ; Compara con 'e'
+    je increment_vowel
+    cmp al, 'i'                   ; Compara con 'i'
+    je increment_vowel
+    cmp al, 'o'                   ; Compara con 'o'
+    je increment_vowel
+    cmp al, 'u'                   ; Compara con 'u'
+    je increment_vowel
+    cmp al, 'A'                   ; Compara con 'A'
+    je increment_vowel
+    cmp al, 'E'                   ; Compara con 'E'
+    je increment_vowel
+    cmp al, 'I'                   ; Compara con 'I'
+    je increment_vowel
+    cmp al, 'O'                   ; Compara con 'O'
+    je increment_vowel
+    cmp al, 'U'                   ; Compara con 'U'
+    je increment_vowel
+    ret                           ; Retornar si no es vocal
+
+increment_vowel:
+    inc vocales                   ; Incrementar contador de vocales
+    ret
+isVowel ENDP
+
+; Función para verificar si un caracter es una consonante
+isConsonant PROC
+    ; Verificar si es letra mayúscula (A-Z)
+    cmp al, 'A'
+    jb not_consonant
+    cmp al, 'Z'
+    jbe check_upper_consonant
+    
+    ; Verificar si es letra minúscula (a-z)
+    cmp al, 'a'
+    jb not_consonant
+    cmp al, 'z'
+    ja not_consonant
+    
+    ; Si es letra, verificar que NO sea vocal
+    call isVowelTest              ; Verificar si es vocal
+    jz not_consonant              ; Si es vocal, no es consonante
+    
+    ; Si llegó aquí, es consonante
+    inc consonantes               ; Incrementar contador de consonantes
+    ret
+
+check_upper_consonant:
+    ; Verificar que NO sea vocal mayúscula
+    call isVowelTest              ; Verificar si es vocal
+    jz not_consonant              ; Si es vocal, no es consonante
+    inc consonantes               ; Incrementar contador de consonantes
+    ret
+
+not_consonant:
+    ret                           ; No es consonante
+isConsonant ENDP
+
+; Función auxiliar para verificar vocal (solo test, no incrementa)
+isVowelTest PROC
+    cmp al, 'a'                   ; Compara con 'a'
+    je is_vowel
+    cmp al, 'e'                   ; Compara con 'e'
+    je is_vowel
+    cmp al, 'i'                   ; Compara con 'i'
+    je is_vowel
+    cmp al, 'o'                   ; Compara con 'o'
+    je is_vowel
+    cmp al, 'u'                   ; Compara con 'u'
+    je is_vowel
+    cmp al, 'A'                   ; Compara con 'A'
+    je is_vowel
+    cmp al, 'E'                   ; Compara con 'E'
+    je is_vowel
+    cmp al, 'I'                   ; Compara con 'I'
+    je is_vowel
+    cmp al, 'O'                   ; Compara con 'O'
+    je is_vowel
+    cmp al, 'U'                   ; Compara con 'U'
+    je is_vowel
+    ; No es vocal
+    mov al, 0                     ; Set ZF = 0
+    ret
+    
+is_vowel:
+    mov al, 1                     ; Set ZF = 1
+    ret
+isVowelTest ENDP
+
+end main

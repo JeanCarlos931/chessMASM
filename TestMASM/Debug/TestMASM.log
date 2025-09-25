@@ -1,0 +1,3 @@
+﻿  Assembling test.asm...
+test.asm(3): fatal error A1000: cannot open file : irvine32.inc
+C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\BuildCustomizations\masm.targets(70,5): error MSB3721: El comando "ml.exe /c /nologo /Zi /Fo"Debug\test.obj" /W3 /errorReport:prompt  /Tatest.asm" salió con el código 1.

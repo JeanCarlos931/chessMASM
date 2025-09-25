@@ -1,0 +1,62 @@
+﻿;Ejercicio 6: Determina la cantidad de segundos que hay en la hora actual
+include irvine32.inc
+
+.data
+    ; Estructura SYSTEMTIME
+    SYSTEMTIME STRUCT
+        wYear      WORD ?
+        wMonth     WORD ?
+        wDayOfWeek WORD ?
+        wDay       WORD ?
+        wHour      WORD ?
+        wMinute    WORD ?
+        wSecond    WORD ?
+        wMilliseconds WORD ?
+    SYSTEMTIME ENDS
+
+    st SYSTEMTIME <>
+    cant_h DWORD ?
+    cant_m DWORD ?
+    cant_s DWORD ?
+    msg BYTE 'Total de segundos: ', 0
+
+.code
+main PROC
+    ; Obtener la hora actual
+    lea eax, st
+    push eax
+    call GetLocalTime
+
+    ; Extraer horas, minutos y segundos
+    movzx eax, st.wHour
+    mov cant_h, eax
+    movzx eax, st.wMinute
+    mov cant_m, eax
+    movzx eax, st.wSecond
+    mov cant_s, eax
+
+    ; Calcular segundos totales
+    mov eax, cant_h
+    mov ebx, 3600
+    mul ebx
+    add cant_s, eax
+
+    mov eax, cant_m
+    mov ebx, 60
+    mul ebx
+    add cant_s, eax
+
+    ; Imprimir mensaje
+    mov edx, OFFSET msg
+    call WriteString
+
+    ; Imprimir total de segundos
+    mov eax, cant_s
+    call WriteDec
+
+    call Crlf
+    call ReadChar
+    exit
+main ENDP
+
+END main

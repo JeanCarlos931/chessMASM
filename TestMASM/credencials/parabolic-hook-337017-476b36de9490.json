@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "parabolic-hook-337017",
+  "private_key_id": "476b36de949004cb443ebb892d0cc5cc12acd2d2",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCujtnFdtzP0k2N\ngu22N7m4X0Z40PzB21qX9A+PucOO3aJmFW0QsyDA8McRu6nzxcIDpxGnp7hWCae1\nWKHSYwrUCgpuFEIC7qYzAdsH6XK8bX/4lN/jYEXmzyhqYkghYQpuyNTcU8rW5T+K\nYd4f5MgEyrlgKQgwt48H53s5jhznx74txYpCPtOuhlokKR4M0ICqgTXMAEMXn9jn\n9Z1f7G9XMxQDuM6rnlBvkzgTgfB9AJ0SQ7oPCIXUu0lbMxmxRzizgIOB+k081R6q\naLAspwoVsPTzIXjLlyGiiybgaQriVj4tqKKsf921oCvlyf68SBj+suRuf/JNMm3O\n3Rv4Dlg/AgMBAAECggEAGhRmre1x1SzvAE8I8/oEaer2LPPQZ6g9s0k4D/mpoY00\nh7r4xg91O85dd6VJoY2wzHnoFdvlmxkrMNlyp+u7QO3VHBgzuptsQl+rGVYEGenk\nPkAD6UVHfFIEEEzpyO7mL6Iax2ZPfmbW5PZ1SN+WEL03EAphWmH6YSxxCSrV370F\nXVAnsHaPZhKDNcthWsaFOqMlmDyBGOYTMLZw4sb15gV3pruirJJAHScnQTBgemdj\nxctcq59VFQVy9oZ/ECx8zcZ9O9p6dS7J1AsmKXm6Wa7YBtkTrDv02UKJ8dqB4qF/\nVBCy0imWdAeKGXh+rUWUCGCY/lBfPO8vyT5vQUqoJQKBgQDWNunmEI0j6T461rZU\nQLBPATQtMVby+kCoE6G/JXDAXi7EXgHEgvF8qyPrRzFWQx3/iUv5WETV9hHw8XYd\nCxHOzrX1vlJFxdTX43y6WYvDvGICtl3W57wvaF8+ThVeZ02KNcwGUPHnn/ZD3hV3\neLfAQ+VsQxEns4y7hlHW0rBfewKBgQDQm6MaPHxJ7pE0Hn1IGbOc+Enghtc9wBTe\n8svbyo9Ts1f1O3QmWdsmyy+w+i7bmDu9T0MQkxo1fP7d0bfs7nxLLeyvnP7Im5Wy\nEWWOTLyOOWFOxeSFvJhQLJDgJ9ohw5b8YCC4x/EJArjEOV2KKLgeUpkJ6wBrHDR0\nxAWNBqzNDQKBgQCnUQsOpPzpAMSXhp+xXTmY6/LKHdCxRmB8J6FdwKu5xZa30EmH\nKVPfsXkDy36wxwnGT4IlBxn1GRdYX/GGq9/D7ddYU8jFMMmXutrwXwL45sqTHchc\nFHL7gIVsD+dG7l81ReHPSSg5Z8sdpXiU8Zhst1uaXSQoI2kYC8keh0A1wwKBgFUX\nt29jTtuliet1qGr5uO+FxDTnK/OPX7QV3Bw6wz5EQNPSva1LJ/7qEPkjBGwk6/Fr\n3JJtPtqksx3uhxUJrv/Hqu1zn+ZauLRbLk7edGebdlr4lCANbx/9HdehyfPN4c/u\nskpNnL+tMYsxTzulIn2T+cM27gPDDI64yv7cwy4dAoGAJlFlNApPNrTpGozowi4/\nq1y7fkn68TTWnyHny4DTgLm08fL/lrfnZIjt7dS0dsRRASaBGUSzEBF1Zn6ElMwR\nSRLjjTne+rv1lqudbo5XllpWvwAC8+Ep7+istfaQeOoyFvr9GmI7QMTcYfPYCWcp\nbHvmW/iaX6iJCdKFuKa/nD4=\n-----END PRIVATE KEY-----\n",
+  "client_email": "admin-519@parabolic-hook-337017.iam.gserviceaccount.com",
+  "client_id": "113747449028704481861",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/admin-519%40parabolic-hook-337017.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

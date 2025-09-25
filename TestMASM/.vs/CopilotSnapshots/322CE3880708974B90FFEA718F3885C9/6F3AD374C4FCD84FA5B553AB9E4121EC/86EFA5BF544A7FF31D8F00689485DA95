@@ -1,0 +1,143 @@
+﻿;ejercicio 5: cuenta vocales y consonantes
+include irvine32.inc
+
+.data
+    ;mensajes
+    msgVocales BYTE "Numero de vocales: ", 0
+    msgConsonantes BYTE "Numero de consonantes: ", 0
+
+    ;frase a analizar
+    frase BYTE "La Universidad UTN era mi quinta opcion, pero ya no",0           
+    
+    ;contadores
+    vocales dd 0
+    consonantes dd 0
+    
+.code
+main PROC
+    mov edx, offset frase      ;mostrar frase
+    call writestring
+    call crlf
+
+    mov edx, offset frase      ;direccion frase
+    call countLetters              
+
+    mov edx, offset msgVocales ;mostrar vocales
+    call writestring
+    mov eax, vocales
+    call writeint
+    call crlf
+
+    mov edx, offset msgConsonantes ;mostrar consonantes
+    call writestring
+    mov eax, consonantes
+    call writeint
+    call crlf
+
+    call WaitMsg           ;esperar
+    exit                         
+main ENDP
+
+countLetters PROC
+    mov ecx, 0                    
+    mov ebx, 0                    
+
+next_char:
+    mov al, [edx + ebx]           ;caracter actual
+    cmp al, 0                     ;fin cadena
+    je done                       
+    
+    call isVowel                  ;es vocal
+    call isConsonant              ;es consonante
+    
+    inc ebx                       ;siguiente
+    jmp next_char                 
+
+done:
+    ret
+countLetters ENDP
+
+isVowel PROC
+    cmp al, 'a'                   ;compara 'a'
+    je increment_vowel
+    cmp al, 'e'                   ;compara 'e'
+    je increment_vowel
+    cmp al, 'i'                   ;compara 'i'
+    je increment_vowel
+    cmp al, 'o'                   ;compara 'o'
+    je increment_vowel
+    cmp al, 'u'                   ;compara 'u'
+    je increment_vowel
+    cmp al, 'A'                   ;compara 'A'
+    je increment_vowel
+    cmp al, 'E'                   ;compara 'E'
+    je increment_vowel
+    cmp al, 'I'                   ;compara 'I'
+    je increment_vowel
+    cmp al, 'O'                   ;compara 'O'
+    je increment_vowel
+    cmp al, 'U'                   ;compara 'U'
+    je increment_vowel
+    ret                           
+
+increment_vowel:
+    inc vocales                   ;incrementa vocales
+    ret
+isVowel ENDP
+
+isConsonant PROC
+    cmp al, 'A'
+    jb not_consonant
+    cmp al, 'Z'
+    jbe check_upper_consonant
+    
+    cmp al, 'a'
+    jb not_consonant
+    cmp al, 'z'
+    ja not_consonant
+    
+    call isVowelTest              ;es vocal
+    jz not_consonant              
+    inc consonantes               ;incrementa consonantes
+    ret
+
+check_upper_consonant:
+    call isVowelTest              ;es vocal
+    jz not_consonant              
+    inc consonantes               ;incrementa consonantes
+    ret
+
+not_consonant:
+    ret                           
+isConsonant ENDP
+
+isVowelTest PROC
+    cmp al, 'a'                   ;compara 'a'
+    je is_vowel
+    cmp al, 'e'                   ;compara 'e'
+    je is_vowel
+    cmp al, 'i'                   ;compara 'i'
+    je is_vowel
+    cmp al, 'o'                   ;compara 'o'
+    je is_vowel
+    cmp al, 'u'                   ;compara 'u'
+    je is_vowel
+    cmp al, 'A'                   ;compara 'A'
+    je is_vowel
+    cmp al, 'E'                   ;compara 'E'
+    je is_vowel
+    cmp al, 'I'                   ;compara 'I'
+    je is_vowel
+    cmp al, 'O'                   ;compara 'O'
+    je is_vowel
+    cmp al, 'U'                   ;compara 'U'
+    je is_vowel
+    mov al, 0                     ;no es vocal
+    ret
+    
+is_vowel:
+    mov al, 1                     ;es vocal
+    ret
+isVowelTest ENDP
+
+end main

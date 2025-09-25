@@ -1,0 +1,2 @@
+C:\Users\joalfaro\source\repos\TestMASM\Debug\TestMASM.exe
+C:\TestMASM\Debug\TestMASM.exe

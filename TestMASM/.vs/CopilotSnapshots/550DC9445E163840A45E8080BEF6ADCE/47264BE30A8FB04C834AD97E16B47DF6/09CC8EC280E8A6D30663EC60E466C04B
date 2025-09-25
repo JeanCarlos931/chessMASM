@@ -1,0 +1,108 @@
+﻿;ejercicio 6, determina la cant de segundos que hay
+include irvine32.inc
+
+.data
+    Hora BYTE   "11:27:42", 0   ; Hora en formato HH:MM:SS
+    Hora2 BYTE  "24:60:60", 0  ; Otra hora en formato HH:MM:SS
+    Hora3 BYTE  "00:00:00", 0  ; Otra hora en formato HH:MM:SS
+    msg BYTE 'Total de segundos: ', 0
+    msg2 BYTE 'Total de segundos (Hora2): ', 0
+    msg3 BYTE 'Total de segundos (Hora3): ', 0
+
+.code
+;---------------------------------------------
+; CalcularSegundos
+; Recibe: esi = dirección de la cadena HH:MM:SS
+; Devuelve: eax = total de segundos
+;---------------------------------------------
+CalcularSegundos PROC
+    push esi
+    push ebx
+    push ecx
+    push edx
+
+    ; Obtener horas
+    movzx eax, BYTE PTR [esi]  ; Primer dígito de la hora
+    sub eax, 30h
+    mov ebx, 10
+    mul ebx
+    mov ecx, eax
+    inc esi
+    movzx eax, BYTE PTR [esi]  ; Segundo dígito de la hora
+    sub eax, 30h
+    add ecx, eax
+
+    ; Obtener minutos
+    add esi,2  ; Saltar los dos puntos
+    movzx eax, BYTE PTR [esi]  ; Primer dígito de los minutos
+    sub eax, 30h
+    mov ebx, 10
+    mul ebx
+    mov edx, eax
+    inc esi
+    movzx eax, BYTE PTR [esi]  ; Segundo dígito de los minutos
+    sub eax, 30h
+    add edx, eax
+
+    ; Obtener segundos
+    add esi,2  ; Saltar los dos puntos
+    movzx eax, BYTE PTR [esi]  ; Primer dígito de los segundos
+    sub eax, 30h
+    mov ebx, 10
+    mul ebx
+    mov esi, eax
+    inc esi
+    movzx eax, BYTE PTR [esi]  ; Segundo dígito de los segundos
+    sub eax, 30h
+    add esi, eax
+
+    ; Calcular segundos totales
+    mov eax, ecx      ; horas
+    mov ebx, 3600
+    mul ebx
+    add esi, eax
+
+    mov eax, edx      ; minutos
+    mov ebx, 60
+    mul ebx
+    add esi, eax
+
+    mov eax, esi      ; total de segundos
+
+    pop edx
+    pop ecx
+    pop ebx
+    pop esi
+    ret
+CalcularSegundos ENDP
+
+main PROC
+    ; Calcular y mostrar para Hora
+    mov esi, OFFSET Hora
+    call CalcularSegundos
+    mov edx, OFFSET msg
+    call WriteString
+    call WriteDec
+    call Crlf
+
+    ; Calcular y mostrar para Hora2
+    mov esi, OFFSET Hora2
+    call CalcularSegundos
+    mov edx, OFFSET msg2
+    call WriteString
+    call WriteDec
+    call Crlf
+
+    ; Calcular y mostrar para Hora3
+    mov esi, OFFSET Hora3
+    call CalcularSegundos
+    mov edx, OFFSET msg3
+    call WriteString
+    call WriteDec
+    call Crlf
+
+    call ReadChar
+    exit
+main ENDP
+
+END main

@@ -1,0 +1,1013 @@
+﻿; ===================================================================
+; JUEGO DE AJEDREZ SIMPLE - VERSIÓN CORREGIDA
+; ===================================================================
+; Versión simplificada que funciona correctamente
+; ===================================================================
+
+INCLUDE Irvine32.inc
+
+.data
+    ; ===================================================================
+    ; MENSAJES DE INTERFAZ
+    ; ===================================================================
+    titulo          BYTE "=== JUEGO DE AJEDREZ SIMPLE ===", 0
+    seleccion_rol   BYTE "Seleccione rol: A o B", 0
+    opcion_a        BYTE "A - Jugador A (Inicia partida)", 0
+    opcion_b        BYTE "B - Jugador B (Espera invitacion)", 0
+    entrada_invalida BYTE "Opcion invalida. Intente nuevamente.", 0
+    
+    ; ===================================================================
+    ; MENSAJES DE ESTADO
+    ; ===================================================================
+    esperando_b     BYTE "Esperando confirmacion del Jugador B...", 0
+    esperando_a     BYTE "Esperando invitacion del Jugador A...", 0
+    partida_iniciada BYTE "Partida iniciada! Es tu turno.", 0
+    turno_jugador   BYTE "Turno del Jugador A. Ingresa tu jugada: ", 0
+    turno_jugador_b BYTE "Turno del Jugador B. Ingresa tu jugada: ", 0
+    esperando_jugada BYTE "Esperando jugada del oponente...", 0
+    
+    ; ===================================================================
+    ; NOMBRES DE ARCHIVOS
+    ; ===================================================================
+    archivo_partida BYTE "data/partida.json", 0
+    
+    ; ===================================================================
+    ; BUFFERS PARA MANEJO DE ARCHIVOS
+    ; ===================================================================
+    buffer_json     BYTE 1024 DUP(0)    ; Buffer para leer/escribir JSON
+    buffer_entrada  BYTE 256 DUP(0)     ; Buffer para entrada del usuario
+    
+    ; ===================================================================
+    ; VARIABLES DE CONTROL
+    ; ===================================================================
+    rol_seleccionado BYTE ?             ; 'A' o 'B'
+    handle_archivo   DWORD ?            ; Handle del archivo
+    bytes_leidos     DWORD ?            ; Bytes leídos del archivo
+    bytes_escritos   DWORD ?            ; Bytes escritos al archivo
+    confirmacion_recibida BYTE 0        ; Bandera para confirmación de Jugador B
+
+    ; ===================================================================
+    ; PLANTILLAS JSON
+    ; ===================================================================
+    json_iniciada    BYTE '{"estado": "iniciada"}', 0
+    json_recibida    BYTE '{"estado": "recibida"}', 0
+    json_jugador_a   BYTE '{"jugadorA": "', 0
+    json_jugador_b   BYTE '{"jugadorB": "', 0
+    json_cierre      BYTE '"}', 0
+    
+    ; ===================================================================
+    ; MENSAJES DE ERROR
+    ; ===================================================================
+    error_crear      BYTE "Error al crear archivo partida.json", 0
+    error_abrir      BYTE "Error al abrir archivo partida.json", 0
+    error_escribir   BYTE "Error al escribir en archivo", 0
+    error_leer       BYTE "Error al leer archivo", 0
+    
+    ; ===================================================================
+    ; MENSAJES DE DEPURACIÓN
+    ; ===================================================================
+    mensaje_debug    BYTE "DEBUG: Contenido del archivo: ", 0
+    mensaje_encontrado BYTE "DEBUG: Palabra 'iniciada' encontrada!", 0
+    mensaje_no_encontrado BYTE "DEBUG: Palabra 'iniciada' NO encontrada, continuando...", 0
+    mensaje_encontrado_recibida BYTE "DEBUG: Palabra 'recibida' encontrada!", 0
+    mensaje_debug_jugada_a BYTE "DEBUG: Escribiendo jugada de Jugador A: ", 0
+
+.code
+main PROC
+    ; ===================================================================
+    ; INICIO DEL PROGRAMA PRINCIPAL
+    ; ===================================================================
+    call Clrscr                    ; Limpiar pantalla
+    
+    ; Mostrar título
+    mov edx, OFFSET titulo
+    call WriteString
+    call Crlf
+    call Crlf
+    
+    ; Mostrar menú de selección de rol
+    call MostrarMenuRol
+    
+    ; Procesar selección según el rol elegido
+    cmp rol_seleccionado, 'A'
+    je JugadorA
+    cmp rol_seleccionado, 'B'
+    je JugadorB
+    
+    ; Si llegamos aquí, hay un error
+    jmp Salir
+    
+JugadorA:
+    ; ===================================================================
+    ; LÓGICA DEL JUGADOR A (INICIA LA PARTIDA)
+    ; ===================================================================
+    call IniciarPartidaA
+    jmp Salir
+    
+JugadorB:
+    ; ===================================================================
+    ; LÓGICA DEL JUGADOR B (ESPERA INVITACIÓN)
+    ; ===================================================================
+    call EsperarInvitacionB
+    jmp Salir
+    
+Salir:
+    call Crlf
+    call WaitMsg
+    exit
+main ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: MostrarMenuRol
+; Descripción: Muestra el menú para seleccionar rol y captura la entrada
+; ===================================================================
+MostrarMenuRol PROC
+    pushad
+    
+    ; Mostrar opciones
+    mov edx, OFFSET seleccion_rol
+    call WriteString
+    call Crlf
+    
+    mov edx, OFFSET opcion_a
+    call WriteString
+    call Crlf
+
+    mov edx, OFFSET opcion_b
+    call WriteString
+    call Crlf
+    call Crlf
+    
+    ; Capturar entrada del usuario
+CapturarEntrada:
+    mov edx, OFFSET buffer_entrada
+    mov ecx, SIZEOF buffer_entrada
+    call ReadString
+    
+    ; Validar entrada
+    cmp eax, 1
+    jne EntradaInvalida
+    
+    mov al, buffer_entrada[0]
+    cmp al, 'A'
+    je EntradaValida
+    cmp al, 'a'
+    je EntradaValida
+    cmp al, 'B'
+    je EntradaValida
+    cmp al, 'b'
+    je EntradaValida
+    
+EntradaInvalida:
+    mov edx, OFFSET entrada_invalida
+    call WriteString
+    call Crlf
+    jmp CapturarEntrada
+    
+EntradaValida:
+    ; Convertir a mayúscula y guardar
+    and al, 11011111b    ; Convertir a mayúscula
+    mov rol_seleccionado, al
+    
+    popad
+    ret
+MostrarMenuRol ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: IniciarPartidaA
+; Descripción: Lógica del Jugador A - crea partida y espera confirmación
+; ===================================================================
+IniciarPartidaA PROC
+    pushad
+    
+    ; Crear archivo partida.json con estado "iniciada"
+    call CrearArchivoPartida
+    cmp eax, 0
+    je ErrorCrearArchivo
+    
+    ; Escribir JSON inicial
+    call EscribirJSONIniciada
+    cmp eax, 0
+    je ErrorEscribirJSON
+    
+    ; Cerrar archivo
+    call CerrarArchivo
+    
+    ; Mostrar mensaje de espera
+    mov edx, OFFSET esperando_b
+    call WriteString
+    call Crlf
+    
+    ; Esperar confirmación del Jugador B
+    call EsperarConfirmacionB
+    
+    ; Iniciar bucle de jugadas
+    call BucleJugadasA
+    
+    popad
+    ret
+    
+ErrorCrearArchivo:
+    mov edx, OFFSET error_crear
+    call WriteString
+    call Crlf
+    popad
+    ret
+    
+ErrorEscribirJSON:
+    mov edx, OFFSET error_escribir
+    call WriteString
+    call Crlf
+    popad
+    ret
+IniciarPartidaA ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: EsperarInvitacionB
+; Descripción: Lógica del Jugador B - espera invitación y confirma
+; ===================================================================
+EsperarInvitacionB PROC
+    pushad
+    
+    ; Mostrar mensaje de espera
+    mov edx, OFFSET esperando_a
+    call WriteString
+    call Crlf
+    call Crlf
+    
+    ; Esperar a que exista el archivo con estado "iniciada"
+    call EsperarArchivoIniciada
+    
+    ; Modificar archivo a estado "recibida"
+    call ConfirmarInvitacion
+    
+    ; Mostrar mensaje de partida iniciada
+    mov edx, OFFSET partida_iniciada
+    call WriteString
+    call Crlf
+    
+    ; Iniciar bucle de jugadas
+    call BucleJugadasB
+    
+    popad
+    ret
+EsperarInvitacionB ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: EscribirJSONIniciada
+; Descripción: Escribe el JSON inicial con estado "iniciada"
+; Retorna: EAX = 0 si error, 1 si éxito
+; ===================================================================
+EscribirJSONIniciada PROC
+    pushad
+    
+    ; Escribir JSON al archivo
+    mov eax, handle_archivo
+    mov edx, OFFSET json_iniciada
+    mov ecx, LENGTHOF json_iniciada - 1
+    call WriteToFile
+    mov bytes_escritos, eax
+    
+    ; Verificar si se escribió correctamente
+    cmp eax, 0
+    je ErrorEscribir
+    
+    mov eax, 1
+    jmp FinEscribir
+    
+ErrorEscribir:
+    mov eax, 0
+    
+FinEscribir:
+    popad
+    ret
+EscribirJSONIniciada ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: CerrarArchivo
+; Descripción: Cierra el archivo abierto
+; ===================================================================
+CerrarArchivo PROC
+    pushad
+    
+    mov eax, handle_archivo
+    call CloseFile
+    
+    popad
+    ret
+CerrarArchivo ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: EsperarConfirmacionB
+; Descripción: Espera a que el Jugador B confirme la invitación
+; ===================================================================
+EsperarConfirmacionB PROC
+    pushad
+    
+BucleEspera:
+    ; Abrir archivo para lectura
+    mov edx, OFFSET archivo_partida
+    call OpenInputFile
+    mov handle_archivo, eax
+
+    cmp eax, INVALID_HANDLE_VALUE
+    je ContinuarEspera
+
+    ; Leer contenido del archivo
+    mov eax, handle_archivo
+    mov edx, OFFSET buffer_json
+    mov ecx, SIZEOF buffer_json
+    call ReadFromFile
+    mov bytes_leidos, eax
+
+    ; Cerrar archivo
+    call CerrarArchivo
+
+    ; Verificar si el JSON es igual a json_recibida
+    call VerificarJSONRecibida
+    mov eax, eax
+    mov al, confirmacion_recibida
+    cmp eax, 1
+    je ConfirmacionRecibida
+
+ContinuarEspera:
+    ; Esperar un poco antes de volver a verificar
+    mov eax, 1000
+    call Delay
+    jmp BucleEspera
+
+ConfirmacionRecibida:
+    popad
+    ret
+EsperarConfirmacionB ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: CrearArchivoPartida
+; Descripción: Crea el archivo partida.json
+; Retorna: EAX = 0 si error, 1 si éxito
+; ===================================================================
+CrearArchivoPartida PROC
+    pushad
+    
+    ; Crear archivo
+    mov edx, OFFSET archivo_partida
+    call CreateOutputFile
+    mov handle_archivo, eax
+    
+    ; Verificar si se creó correctamente
+    cmp eax, INVALID_HANDLE_VALUE
+    je ErrorCrear
+    
+    mov eax, 1
+    jmp FinCrear
+    
+ErrorCrear:
+    mov eax, 0
+    
+FinCrear:
+    popad
+    ret
+CrearArchivoPartida ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: VerificarJSONRecibida
+; Descripción: Compara buffer_json con json_recibida y muestra mensajes debug
+; Retorna: EAX = 1 si son iguales, 0 si no
+; ===================================================================
+VerificarJSONRecibida PROC
+    pushad
+
+    mov esi, OFFSET buffer_json      ; buffer leído del archivo
+    mov edi, OFFSET json_recibida    ; cadena esperada
+    mov ecx, LENGTHOF json_recibida  ; longitud de la cadena esperada
+    mov ebx, 0                       ; bandera de diferencia
+
+CompararLoop:
+    cmp ecx, 0
+    je FinComparar
+
+    mov al, [esi]
+    mov bl, [edi]
+    cmp al, bl
+    jne Diferente
+
+    inc esi
+    inc edi
+    dec ecx
+    jmp CompararLoop
+
+Diferente:
+    mov ebx, 1
+    jmp FinComparar
+
+FinComparar:
+    cmp ebx, 0
+    je SonIguales
+    mov eax, 0
+    mov edx, OFFSET mensaje_debug
+    call WriteString
+    mov edx, OFFSET buffer_json
+    call WriteString
+    call Crlf
+    mov edx, OFFSET error_leer
+    call WriteString
+    call Crlf
+    jmp FinVerificar
+
+SonIguales:
+    mov eax, 1
+    mov edx, OFFSET mensaje_debug
+    call WriteString
+    mov edx, OFFSET buffer_json
+    call WriteString
+    call Crlf
+    mov edx, OFFSET mensaje_encontrado_recibida
+    call WriteString
+    call Crlf
+    mov confirmacion_recibida, 1
+
+FinVerificar:
+    popad
+    ret
+VerificarJSONRecibida ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: BuscarPalabraRecibida
+; Descripción: Busca la palabra "recibida" en el buffer
+; Parámetros: EDX = offset del buffer
+; Retorna: EAX = 1 si encuentra, 0 si no
+; ===================================================================
+BuscarPalabraRecibida PROC
+    pushad
+    
+    mov esi, edx
+    mov ecx, bytes_leidos
+    sub ecx, 7  ; Tamaño mínimo para contener "recibida"
+    
+BuscarLoop:
+    cmp ecx, 0
+    jle NoEncontrado
+    
+    ; Verificar si los siguientes 8 caracteres son "recibida"
+    mov al, [esi]
+    cmp al, 'r'
+    jne Siguiente
+    
+    ; Encontrado
+    mov eax, 1
+    jmp FinBuscar
+    
+Siguiente:
+    inc esi
+    dec ecx
+    jmp BuscarLoop
+    
+NoEncontrado:
+    mov eax, 0
+    
+FinBuscar:
+    popad
+    ret
+BuscarPalabraRecibida ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: EsperarArchivoIniciada
+; Descripción: Espera a que exista el archivo con estado "iniciada"
+; ===================================================================
+EsperarArchivoIniciada PROC
+    pushad
+    
+BucleEsperaArchivo:
+    ; Intentar abrir archivo
+    mov edx, OFFSET archivo_partida
+    call OpenInputFile
+    mov handle_archivo, eax
+    
+    cmp eax, INVALID_HANDLE_VALUE
+    je ContinuarEsperaArchivo
+    
+    ; Leer contenido
+    mov eax, handle_archivo
+    mov edx, OFFSET buffer_json
+    mov ecx, SIZEOF buffer_json
+    call ReadFromFile
+    mov bytes_leidos, eax
+    
+    ; Cerrar archivo
+    call CerrarArchivo
+    
+    ; Verificar que se leyó algo
+    cmp bytes_leidos, 0
+    je ContinuarEsperaArchivo
+    
+    ; Mostrar contenido leído para depuración
+    mov edx, OFFSET mensaje_debug
+    call WriteString
+    mov edx, OFFSET buffer_json
+    call WriteString
+    call Crlf
+
+    jmp ArchivoEncontrado
+    
+ContinuarEsperaArchivo:
+    ; Mostrar punto de espera
+    mov al, '.'
+    call WriteChar
+    ; Esperar un poco
+    mov eax, 1000
+    call Delay
+    jmp BucleEsperaArchivo
+    
+ArchivoEncontrado:
+    call Crlf
+    mov edx, OFFSET mensaje_encontrado
+    call WriteString
+    call Crlf
+    popad
+    ret
+EsperarArchivoIniciada ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: BuscarPalabraIniciada
+; Descripción: Busca la palabra "iniciada" en el buffer
+; Parámetros: EDX = offset del buffer
+; Retorna: EAX = 1 si encuentra, 0 si no
+; ===================================================================
+BuscarPalabraIniciada PROC
+    pushad
+    
+    mov esi, edx
+    mov ecx, bytes_leidos
+    sub ecx, 7  ; Tamaño mínimo para contener "iniciada" (8 caracteres)
+    
+    ; Verificar que tenemos suficientes caracteres
+    cmp ecx, 0
+    jle NoEncontradoIniciada
+    
+BuscarIniciadaLoop:
+    cmp ecx, 0
+    jle NoEncontradoIniciada
+    
+    ; Verificar si los siguientes 8 caracteres son "iniciada"
+    mov al, [esi]
+    cmp al, 'i'
+    jne SiguienteIniciada
+    
+    mov al, [esi+1]
+    cmp al, 'n'
+    jne SiguienteIniciada
+    
+    mov al, [esi+2]
+    cmp al, 'i'
+    jne SiguienteIniciada
+    
+    mov al, [esi+3]
+    cmp al, 'c'
+    jne SiguienteIniciada
+    
+    mov al, [esi+4]
+    cmp al, 'i'
+    jne SiguienteIniciada
+    
+    mov al, [esi+5]
+    cmp al, 'a'
+    jne SiguienteIniciada
+    
+    mov al, [esi+6]
+    cmp al, 'd'
+    jne SiguienteIniciada
+    
+    mov al, [esi+7]
+    cmp al, 'a'
+    jne SiguienteIniciada
+    
+    ; Encontrado
+    mov eax, 1
+    jmp FinBuscarIniciada
+    
+SiguienteIniciada:
+    inc esi
+    dec ecx
+    jmp BuscarIniciadaLoop
+    
+NoEncontradoIniciada:
+    mov eax, 0
+    
+FinBuscarIniciada:
+    popad
+    ret
+BuscarPalabraIniciada ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: ConfirmarInvitacion
+; Descripción: Modifica el archivo a estado "recibida"
+; ===================================================================
+ConfirmarInvitacion PROC
+    pushad
+    
+    ; Abrir archivo para escritura
+    mov edx, OFFSET archivo_partida
+    call CreateOutputFile
+    mov handle_archivo, eax
+    
+    ; Escribir JSON con estado "recibida"
+    mov eax, handle_archivo
+    mov edx, OFFSET json_recibida
+    mov ecx, LENGTHOF json_recibida - 1
+    call WriteToFile
+    
+    ; Cerrar archivo
+    call CerrarArchivo
+    
+    popad
+    ret
+ConfirmarInvitacion ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: BucleJugadasA
+; Descripción: Bucle principal de jugadas para el Jugador A
+; ===================================================================
+BucleJugadasA PROC
+    pushad
+    
+BuclePrincipalA:
+    ; Mostrar turno del jugador A
+    mov edx, OFFSET turno_jugador
+    call WriteString
+    
+    ; Capturar jugada del usuario
+    mov edx, OFFSET buffer_entrada
+    mov ecx, SIZEOF buffer_entrada
+    call ReadString
+    
+    ; Escribir jugada en JSON
+    call EscribirJugadaA
+    
+    ; Verificar si la partida debe terminar
+    call VerificarFinPartida
+    cmp eax, 1
+    je FinPartidaA
+    
+    ; Esperar jugada del Jugador B
+    mov edx, OFFSET esperando_jugada
+    call WriteString
+    call Crlf
+    
+    call EsperarJugadaB
+    
+    ; Verificar si la partida debe terminar
+    call VerificarFinPartida
+    cmp eax, 1
+    je FinPartidaA
+    
+    jmp BuclePrincipalA
+    
+FinPartidaA:
+    popad
+    ret
+BucleJugadasA ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: BucleJugadasB
+; Descripción: Bucle principal de jugadas para el Jugador B
+; ===================================================================
+BucleJugadasB PROC
+    pushad
+    
+BuclePrincipalB:
+    ; Esperar jugada del Jugador A
+    mov edx, OFFSET esperando_jugada
+    call WriteString
+    call Crlf
+    
+    call EsperarJugadaA
+    
+    ; Verificar si la partida debe terminar
+    call VerificarFinPartida
+    cmp eax, 1
+    je FinPartidaB
+    
+    ; Mostrar turno del jugador B
+    mov edx, OFFSET turno_jugador_b
+    call WriteString
+    
+    ; Capturar jugada del usuario
+    mov edx, OFFSET buffer_entrada
+    mov ecx, SIZEOF buffer_entrada
+    call ReadString
+    
+    ; Escribir jugada en JSON
+    call EscribirJugadaB
+    
+    ; Verificar si la partida debe terminar
+    call VerificarFinPartida
+    cmp eax, 1
+    je FinPartidaB
+    
+    jmp BuclePrincipalB
+    
+FinPartidaB:
+    popad
+    ret
+BucleJugadasB ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: EscribirJugadaA
+; Descripción: Escribe la jugada del Jugador A en el archivo JSON
+; ===================================================================
+EscribirJugadaA PROC
+    pushad
+
+    ; Abrir archivo para escritura
+    mov edx, OFFSET archivo_partida
+    call CreateOutputFile
+    mov handle_archivo, eax
+
+    ; DEBUG: Mostrar jugada que se va a escribir
+    mov edx, OFFSET mensaje_debug_jugada_a
+    call WriteString
+    mov edx, OFFSET buffer_entrada
+    call WriteString
+    call Crlf
+
+    ; Escribir JSON con jugada del Jugador A
+    mov eax, handle_archivo
+    mov edx, OFFSET json_jugador_a
+    mov ecx, LENGTHOF json_jugador_a - 1
+    call WriteToFile
+
+    ; Escribir la jugada (usar longitud real)
+    mov eax, handle_archivo
+    mov edx, OFFSET buffer_entrada
+    mov ecx, [esp+32] ; eax de ReadString, cantidad de caracteres leídos
+    call WriteToFile
+
+    ; Escribir cierre del JSON
+    mov eax, handle_archivo
+    mov edx, OFFSET json_cierre
+    mov ecx, LENGTHOF json_cierre - 1
+    call WriteToFile
+
+    ; DEBUG: Confirmar que la jugada fue escrita
+    mov edx, OFFSET mensaje_encontrado
+    call WriteString
+    call Crlf
+
+    ; Cerrar archivo
+    call CerrarArchivo
+
+    popad
+    ret
+EscribirJugadaA ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: EscribirJugadaB
+; Descripción: Escribe la jugada del Jugador B en el archivo JSON
+; ===================================================================
+EscribirJugadaB PROC
+    pushad
+    
+    ; Abrir archivo para escritura
+    mov edx, OFFSET archivo_partida
+    call CreateOutputFile
+    mov handle_archivo, eax
+    
+    ; Escribir JSON con jugada del Jugador B
+    mov eax, handle_archivo
+    mov edx, OFFSET json_jugador_b
+    mov ecx, LENGTHOF json_jugador_b - 1
+    call WriteToFile
+    
+    ; Escribir la jugada
+    mov eax, handle_archivo
+    mov edx, OFFSET buffer_entrada
+    mov ecx, eax  ; Tamaño de la cadena leída
+    call WriteToFile
+    
+    ; Escribir cierre del JSON
+    mov eax, handle_archivo
+    mov edx, OFFSET json_cierre
+    mov ecx, LENGTHOF json_cierre - 1
+    call WriteToFile
+    
+    ; Cerrar archivo
+    call CerrarArchivo
+    
+    popad
+    ret
+EscribirJugadaB ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: EsperarJugadaA
+; Descripción: Espera a que el Jugador A haga su jugada
+; ===================================================================
+EsperarJugadaA PROC
+    pushad
+    
+BucleEsperaJugadaA:
+    ; Abrir archivo para lectura
+    mov edx, OFFSET archivo_partida
+    call OpenInputFile
+    mov handle_archivo, eax
+    
+    cmp eax, INVALID_HANDLE_VALUE
+    je ContinuarEsperaJugadaA
+    
+    ; Leer contenido
+    mov eax, handle_archivo
+    mov edx, OFFSET buffer_json
+    mov ecx, SIZEOF buffer_json
+    call ReadFromFile
+    mov bytes_leidos, eax
+    
+    ; Cerrar archivo
+    call CerrarArchivo
+    
+    ; Buscar "jugadorA" en el buffer
+    mov edx, OFFSET buffer_json
+    call BuscarJugadorA
+    cmp eax, 1
+    je JugadaRecibidaA
+    
+ContinuarEsperaJugadaA:
+    ; Esperar un poco
+    mov eax, 1000
+    call Delay
+    jmp BucleEsperaJugadaA
+    
+JugadaRecibidaA:
+    popad
+    ret
+EsperarJugadaA ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: EsperarJugadaB
+; Descripción: Espera a que el Jugador B haga su jugada
+; ===================================================================
+EsperarJugadaB PROC
+    pushad
+    
+BucleEsperaJugadaB:
+    ; Abrir archivo para lectura
+    mov edx, OFFSET archivo_partida
+    call OpenInputFile
+    mov handle_archivo, eax
+    
+    cmp eax, INVALID_HANDLE_VALUE
+    je ContinuarEsperaJugadaB
+    
+    ; Leer contenido
+    mov eax, handle_archivo
+    mov edx, OFFSET buffer_json
+    mov ecx, SIZEOF buffer_json
+    call ReadFromFile
+    mov bytes_leidos, eax
+    
+    ; Cerrar archivo
+    call CerrarArchivo
+    
+    ; Buscar "jugadorB" en el buffer
+    mov edx, OFFSET buffer_json
+    call BuscarJugadorB
+    cmp eax, 1
+    je JugadaRecibidaB
+    
+ContinuarEsperaJugadaB:
+    ; Esperar un poco
+    mov eax, 1000
+    call Delay
+    jmp BucleEsperaJugadaB
+    
+JugadaRecibidaB:
+    popad
+    ret
+EsperarJugadaB ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: BuscarJugadorA
+; Descripción: Busca "jugadorA" en el buffer
+; Parámetros: EDX = offset del buffer
+; Retorna: EAX = 1 si encuentra, 0 si no
+; ===================================================================
+BuscarJugadorA PROC
+    pushad
+    
+    mov esi, edx
+    mov ecx, bytes_leidos
+    sub ecx, 7  ; Tamaño mínimo para contener "jugadorA"
+    
+BuscarJugadorALoop:
+    cmp ecx, 0
+    jle NoEncontradoJugadorA
+    
+    ; Verificar si los siguientes 8 caracteres son "jugadorA"
+    mov al, [esi]
+    cmp al, 'j'
+    jne SiguienteJugadorA
+    
+    mov al, [esi+1]
+    cmp al, 'u'
+    jne SiguienteJugadorA
+    
+    mov al, [esi+2]
+    cmp al, 'g'
+    jne SiguienteJugadorA
+    
+    mov al, [esi+3]
+    cmp al, 'a'
+    jne SiguienteJugadorA
+    
+    mov al, [esi+4]
+    cmp al, 'd'
+    jne SiguienteJugadorA
+    
+    mov al, [esi+5]
+    cmp al, 'o'
+    jne SiguienteJugadorA
+    
+    mov al, [esi+6]
+    cmp al, 'r'
+    jne SiguienteJugadorA
+    
+    mov al, [esi+7]
+    cmp al, 'A'
+    jne SiguienteJugadorA
+    
+    ; Encontrado
+    mov eax, 1
+    jmp FinBuscarJugadorA
+    
+SiguienteJugadorA:
+    inc esi
+    dec ecx
+    jmp BuscarJugadorALoop
+    
+NoEncontradoJugadorA:
+    mov eax, 0
+    
+FinBuscarJugadorA:
+    popad
+    ret
+BuscarJugadorA ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: BuscarJugadorB
+; Descripción: Busca "jugadorB" en el buffer
+; Parámetros: EDX = offset del buffer
+; Retorna: EAX = 1 si encuentra, 0 si no
+; ===================================================================
+BuscarJugadorB PROC
+    pushad
+    
+    mov esi, edx
+    mov ecx, bytes_leidos
+    sub ecx, 7  ; Tamaño mínimo para contener "jugadorB"
+    
+BuscarJugadorBLoop:
+    cmp ecx, 0
+    jle NoEncontradoJugadorB
+    
+    ; Verificar si los siguientes 8 caracteres son "jugadorB"
+    mov al, [esi]
+    cmp al, 'B'
+    jne SiguienteJugadorB
+    
+    
+    ; Encontrado
+    mov eax, 1
+    jmp FinBuscarJugadorB
+    
+SiguienteJugadorB:
+    inc esi
+    dec ecx
+    jmp BuscarJugadorBLoop
+    
+NoEncontradoJugadorB:
+    mov eax, 0
+    
+FinBuscarJugadorB:
+    popad
+    ret
+BuscarJugadorB ENDP
+
+; ===================================================================
+; PROCEDIMIENTO: VerificarFinPartida
+; Descripción: Verifica si la partida debe terminar
+; Retorna: EAX = 1 si debe terminar, 0 si continúa
+; ===================================================================
+VerificarFinPartida PROC
+    pushad
+    
+    ; Por simplicidad, en esta implementación básica
+    ; la partida continúa hasta que el usuario presione 'q' para salir
+    ; En una implementación completa, aquí se verificarían condiciones
+    ; como jaque mate, tablas, etc.
+    
+    ; Por ahora, siempre retornamos 0 (continuar)
+    mov eax, 0
+    
+    popad
+    ret
+VerificarFinPartida ENDP
+
+END main
